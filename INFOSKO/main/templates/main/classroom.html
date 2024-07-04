@@ -1,0 +1,38 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Classroom{% endblock %}
+
+{% block content %}
+<nav class="navbar navbar-expand-lg navbar-custom justify-content">
+    <div class="back-button mb-3 mt-2">
+        <a href="{% url 'index' %}" class="btn btn-warning btn-lg">Back</a>
+    </div>
+    <a class="navbar-brand text-center ml-5">CLASSROOMS</a>
+</nav>
+
+<div class="container-custom mt-5 ml-5 mr-5 pl-3">
+<div class="container-lg d-flex justify-content mt-5 ml-0">
+    <div class="col-xl-8 column mr-lg-5">
+        <h2>Administrator</h2>
+        <p class="text-start">These are the occupied and unoccupied classrooms right now, might as well check the notifications for room request, below are the indication whether the room is occupied or unoccupied.</p>
+        <ul>
+            <li>Classroom is <span style="color: green; font-weight: 700;">GREEN</span> when Unoccupied.</li>
+            <li>Classroom is <span style="color: red; font-weight: 700;">RED< <div class="container-custom mt-5 ml-5 mr-5 pl-3">/span> when Occupied.</li>
+        </ul>
+        <div class="room-container" id="roomContainer">
+            {% for classroom in classrooms %}
+                <article class="rooms {% if classroom.is_occupied %}red{% else %}green{% endif %}">
+                    {{ classroom.room_number }}
+                    <span class="spanver"></span>
+                </article>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+</div>
+<!--Script-->
+<script src="{% static 'js/infoscript.js' %}"></script>
+
+
+{% endblock %}
