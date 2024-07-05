@@ -22,13 +22,14 @@
     background-color: white;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     border-radius: 15px;
-    height: 40rem;
-}
-
+    display: flex; /* Enable flexbox */
+    flex-direction: column; /* Stack elements vertically */
+  }
+  
 .button-container {
     display: flex;
     justify-content: center;
-    gap: 50px; /* Adjust gap as needed */
+    gap: 60px; /* Adjust gap as needed */
     flex-wrap: wrap;
 }
 
