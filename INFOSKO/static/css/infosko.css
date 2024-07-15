@@ -110,25 +110,96 @@
 }
 
 /*Faculties*/
-.card {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s;
-}
-.card:hover {
+.person-image-container {
+    position: relative;
+    display:inline-block;
     cursor: pointer;
-    transform: scale(1.1);
-}
-.modal-content {
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-}
-.blur-background {
-    filter: blur(5px);
 }
 
-.personnel-image {
-    width: 100%; /* Ensures the image fits within its container */
-    height: auto; /* Maintains aspect ratio */
+.person-image {
+    border-radius: 50%;
+    width: 150px;
+    height: 150px;
+    border: 2px solid black;
 }
+
+.person-name {
+    margin-top: 10px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* Centering the Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-dialog {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh; /* Full viewport height */
+}
+
+.modal-content {
+    padding: 20px;
+    border: 2px solid black !important; 
+    width: 90%;
+    max-width: 500px;
+    text-align: center;
+    margin: auto;
+    margin-top: 200px;
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-image {
+    border-radius: 50%;
+    width: 300px;
+    height: 300px;
+    border: 2px solid black;
+    margin-bottom: 20px;
+}
+
+
+.close {
+    color: black;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    z-index: 1;
+    top: 10px;
+    right: 20px;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+
+
+
+
+
 
 /*Classroom*/

@@ -23,54 +23,54 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Faculties toggle
-$(document).ready(function() {
+// Faculties 
+function fetchPersonnel() {
     fetch('/api/personnel/')
         .then(response => response.json())
         .then(data => {
-            const container = $('#personnel-container');
-            data.forEach(person => {
-                const card = `
-                    <div class="col-md-4">
-                        <div class="card" data-toggle="modal" data-target="#modal-${person.id}">
-                            <img src="${person.photo}" class="card-img-top personnel-image" alt="${person.name}">
-                            <div class="card-body">
-                                <h5 class="card-title">${person.name}</h5>
-                            </div>
+            const personnelList = document.getElementById('personnel-list');
+            personnelList.innerHTML = '';  // Clear existing content to prevent duplicates
+
+            data.forEach((person, index) => {
+                const personCard = document.createElement('div');
+                personCard.className = 'col-md-3';
+                personCard.innerHTML = `
+                    <div class="personnel-card mt-5 text-center">
+                        <div class="person-image-container" onclick="showModal(${index})">
+                            <img src="${person.image ? person.image : 'https://via.placeholder.com/150'}" class="person-image" alt="${person.name}">
+                            <h5 class="person-name">${person.name}</h5>
                         </div>
                     </div>
                 `;
-                container.append(card);
-
-                const modalTemplate = `
-                    <div class="modal fade" id="modal-${person.id}" tabindex="-1" role="dialog" aria-labelledby="modal-${person.id}Label" aria-hidden="true">
-                        <div class="modal-dialog" role="document">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="modal-${person.id}Label">${person.name}</h5>
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>${person.info}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                $('body').append(modalTemplate);
+                personnelList.appendChild(personCard);
             });
+        })
+        .catch(error => console.error('Error fetching personnel:', error));
+}
 
-            $('.card').on('click', function() {
-                $('body').addClass('blur-background');
-            });
+// Function to show modal with personnel information
+function showModal(id) {
+    fetch('/api/personnel/')
+        .then(response => response.json())
+        .then(data => {
+            const person = data[id];
+            document.getElementById('modal-name').textContent = person.name;
+            document.getElementById('modal-position').textContent = 'Position: ' + person.position;
+            document.getElementById('modal-contact').textContent = 'Contact: ' + person.contact;
+            document.getElementById('modal-location').textContent = 'Location: ' + person.location;
+            document.getElementById('modal-image').src = person.image ? person.image : 'https://via.placeholder.com/150';
+            document.getElementById('personnelModal').style.display = 'block';
+        })
+        .catch(error => console.error('Error fetching personnel:', error));
+}
 
-            $('.modal').on('hidden.bs.modal', function () {
-                $('body').removeClass('blur-background');
-            });
-        });
-});
+// Function to hide modal
+function hideModal() {
+    document.getElementById('personnelModal').style.display = 'none';
+}
+
+// Initialize personnel data fetching on page load
+document.addEventListener('DOMContentLoaded', fetchPersonnel);
 
 // Classroom
 document.addEventListener("DOMContentLoaded", function() {

@@ -5,8 +5,8 @@
 {% block title %}Faculties{% endblock %}
 
 {% block content %}
- <!--NAVBAR-->
- <nav class="navbar navbar-expand-lg navbar-custom justify-content">
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-custom justify-content">
     <div class="back-button mb-3 mt-2">
         <a href="{% url 'index' %}" class="btn btn-warning btn-lg">Back</a>
     </div>
@@ -15,17 +15,28 @@
     <a class="nav-link" href="{% url 'parttime' %}">PART TIME</a>
 </nav>
 
- <!--Body-->
-<div class="container mt-5">
-    <div id="personnel-container" class="row justify-content-center">
-        <!-- Dynamic content will be inserted here -->
+<!-- Body -->
+<div class="container">
+    <div class="row" id="personnel-list">
+        <!-- Personnel cards will be inserted here by JavaScript -->
     </div>
 </div>
 
-<!--Script-->
-<script>
-    var redirectUrl = "{% url 'index' %}";
-</script>
+<!-- Modal -->
+<div id="personnelModal" class="modal">
+    <div class="modal-content bg-warning">
+        <span class="close" onclick="hideModal()">&times;</span>
+        <div class="modal-body">
+            <img id="modal-image" class="modal-image" alt="Personnel Image">
+            <h5 id="modal-name"></h5>
+            <p id="modal-position"></p>
+            <p id="modal-contact"></p>
+            <p id="modal-location"></p>
+        </div>
+    </div>
+</div>
+
+<!-- Include the external JavaScript file -->
 <script src="{% static 'js/infoscript.js' %}"></script>
 
 {% endblock %}
