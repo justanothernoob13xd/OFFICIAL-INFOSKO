@@ -12,27 +12,155 @@
 </nav>
 
 <div class="container-custom mt-5 ml-5 mr-5 pl-3">
-<div class="container-lg d-flex justify-content mt-5 ml-0">
-    <div class="col-xl-8 column mr-lg-5">
-        <h2>Administrator</h2>
-        <p class="text-start">These are the occupied and unoccupied classrooms right now, might as well check the notifications for room request, below are the indication whether the room is occupied or unoccupied.</p>
-        <ul>
-            <li>Classroom is <span style="color: green; font-weight: 700;">GREEN</span> when Unoccupied.</li>
-            <li>Classroom is <span style="color: red; font-weight: 700;">RED</span> when Occupied.</li>
-        </ul>
-        <div class="room-container" id="roomContainer">
-            {% for classroom in classrooms %}
-                <article class="rooms {% if classroom.is_occupied %}red{% else %}green{% endif %}">
-                    {{ classroom.room_number }}
-                    <span class="spanver"></span>
-                </article>
-            {% endfor %}
+    <div class="container-lg d-flex justify-content mt-5 ml-0">
+        <div class="column mr-lg-5">
+            <h2>Dynamic Classroom Viewer</h2>
+            <p class="text-start">These are the occupied and unoccupied classrooms right now, might as well check the notifications for room request, below are the indication whether the room is occupied or unoccupied.</p>
+            <ul>
+                <li>Classroom is <span style="color: green; font-weight: 700;">GREEN</span> when Unoccupied.</li>
+                <li>Classroom is <span style="color: red; font-weight: 700;">RED</span> when Occupied.</li>
+            </ul>
+            <h3>Room Schedules for {{ current_day }}</h3>
+            <div class="d-flex p-1" id="roomContainer" style="gap: 10px">
+                {% for classroom in rooms %}
+                <div id="room-{{ classroom.id }}" class="p-4 card rooms text-center font-weight-bold {% if classroom.isOccupied %}bg-danger{% else %}bg-success{% endif %}" style="width: 150px; height: 120px;" data-toggle="modal" data-target="#roomModal" data-id="{{ classroom.id }}">
+                    <p>Room No.</p>
+                    <p class="room-number">{{ classroom.number }}</p>    
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Modal Structure -->
+<div class="modal fade" id="roomModal" tabindex="-1" role="dialog" aria-labelledby="roomModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-dark" id="roomModalLabel">Room Details</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Room details will be loaded here -->
+            </div>
+        </div>
+    </div>
 </div>
-<!--Script-->
-<script src="{% static 'js/infoscript.js' %}"></script>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        console.log("Document is ready");
+
+        $('#roomModal').on('show.bs.modal', function (event) {
+            var button = $(event.relatedTarget);  // Button that triggered the modal
+            var roomId = button.data('id');  // Extract info from data-* attributes
+            console.log("Room ID:", roomId);  // Log the room ID
+            var modal = $(this);
+
+            if (roomId === undefined) {
+                console.error("Room ID is undefined");
+                return;  // Exit if roomId is undefined
+            }
+
+            // Clear previous content
+            modal.find('.modal-body').html('');
+
+            // Load new content
+            $.ajax({
+                url: "{% url 'room_modal' roomid=0 %}".replace('0', roomId),
+                success: function(data) {
+                    console.log("AJAX success:", data);
+                    modal.find('.modal-body').html(data);
+
+                    // After loading the content, fetch the room status
+                    $.ajax({
+                        url: "{% url 'check_occupancy' roomid=0 %}".replace('0', roomId),
+                        method: "GET",
+                        success: function(statusData) {
+                            var statusElement = modal.find("#room-status");
+                            if (statusData.isOccupied) {
+                                statusElement.html(
+                                    'Status: <span class="text-danger">Occupied</span>'
+                                );
+                            } else {
+                                statusElement.html(
+                                    'Status: <span class="text-success">Unoccupied</span>'
+                                );
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("Error checking occupancy:", error);
+                        }
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error loading modal content:", error);
+                }
+            });
+        });
+
+        // Function to update room details
+        function updateRoomDetails() {
+            $.ajax({
+                url: "{% url 'get_rooms' %}",
+                method: "GET",
+                success: function(data) {
+                    console.log("Room details update:", data);
+                    const roomIds = data.rooms.map(room => room.id);
+                    const existingRoomIds = $(".rooms").map(function() {
+                        return $(this).data("id");
+                    }).get();
+
+                    // Add new rooms
+                    data.rooms.forEach(function(room) {
+                        if (!existingRoomIds.includes(room.id)) {
+                            $("#roomContainer").append(
+                                `<div id="room-${room.id}" class="p-4 card rooms text-center font-weight-bold ${room.isOccupied ? 'bg-danger' : 'bg-success'}" style="width: 150px; height: 120px;" data-toggle="modal" data-target="#roomModal" data-id="${room.id}">
+                                    <p>Room No.</p>
+                                    <p class="room-number">${room.number}</p>
+                                </div>`
+                            );
+                        }
+                    });
+
+                    // Remove deleted rooms
+                    existingRoomIds.forEach(function(id) {
+                        if (!roomIds.includes(id)) {
+                            $(`#room-${id}`).remove();
+                        }
+                    });
+
+                    // Update existing rooms
+                    data.rooms.forEach(function(room) {
+                        var roomElement = $(`#room-${room.id}`);
+
+                        // Update room number
+                        roomElement.find('.room-number').text(room.number);
+
+                        // Update room status
+                        if (room.isOccupied) {
+                            roomElement.removeClass('bg-success').addClass('bg-danger');
+                        } else {
+                            roomElement.removeClass('bg-danger').addClass('bg-success');
+                        }
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error updating room details:", error);
+                }
+            });
+        }
+
+        // Update room details every 5 seconds (instead of 10)
+        setInterval(updateRoomDetails, 5000);
+
+        // Initial details update
+        updateRoomDetails();
+    });
+</script>
 
 
 {% endblock %}

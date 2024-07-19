@@ -110,6 +110,10 @@
 }
 
 /*Faculties*/
+.container-fluid {
+    min-height: 200vh; /* 100vh = 100% viewport height */
+  }
+
 .person-image-container {
     position: relative;
     display:inline-block;
@@ -118,8 +122,8 @@
 
 .person-image {
     border-radius: 50%;
-    width: 150px;
-    height: 150px;
+    width: 170px;
+    height: 170px;
     border: 2px solid black;
 }
 
@@ -157,7 +161,7 @@
     border: 2px solid black !important; 
     width: 90%;
     max-width: 500px;
-    text-align: center;
+    text-align:left;
     margin: auto;
     margin-top: 200px;
 }
@@ -176,7 +180,6 @@
     border: 2px solid black;
     margin-bottom: 20px;
 }
-
 
 .close {
     color: black;
@@ -197,9 +200,3 @@
 }
 
 
-
-
-
-
-
-/*Classroom*/
