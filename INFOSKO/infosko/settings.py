@@ -28,7 +28,8 @@ SECRET_KEY = 'django-insecure-pls+37t)#8+y605=x$-1zaf+2ro$@xwx4v#kq4#1du#&m#fva4
 DEBUG = False
 
 ALLOWED_HOSTS = [
-   'https://coral-app-xfnop.ondigitalocean.app/'
+   'coral-app-xfnop.ondigitalocean.app'
+   'infosko.blog'
 ]
 
 
@@ -83,7 +84,7 @@ WSGI_APPLICATION = 'infosko.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
 
