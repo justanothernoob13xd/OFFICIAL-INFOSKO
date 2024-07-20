@@ -28,8 +28,9 @@ SECRET_KEY = 'django-insecure-pls+37t)#8+y605=x$-1zaf+2ro$@xwx4v#kq4#1du#&m#fva4
 DEBUG = False
 
 ALLOWED_HOSTS = [
+    '143.198.192.156'
    'infosko.blog',
-   'wwww.infosko.blog' 
+   'wwww.infosko.blog',
 ]
 
 
