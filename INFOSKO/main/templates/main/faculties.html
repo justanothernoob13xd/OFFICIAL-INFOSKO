@@ -1,5 +1,4 @@
 {% extends "main/index.html" %}
-
 {% load static %}
 
 {% block title %}Faculties{% endblock %}
@@ -10,13 +9,22 @@
     <div class="back-button mb-3 mt-2">
         <a href="{% url 'index' %}" class="btn btn-warning btn-lg">Back</a>
     </div>
-    <a class="navbar-brand ml-5">FACULTIES</a>
+    <a class="navbar-brand ml-5">FACULTY MEMBERS</a>
 </nav>
 
 <!-- Body -->
-<div class=" container-fluid mt-3">
-    <div id="personnel-list" class="flex-row flex-column align-items-center">
-        <!-- Personnel cards will be inserted here by JavaScript -->
+<div class="container-fluid mt-3">
+    <div id="personnel-list" class="d-flex flex-column align-items-center">
+        <!-- Key Persons Section -->
+        <div id="key-persons-container" class="row justify-content-center mb-5"></div>
+
+        <!-- Full-Time Section -->
+        <h3 class="text-center" id="full-time-header" style="margin-top: 50px;">Full-Time</h3>
+        <div id="full-time-container" class="row justify-content-center mb-5"></div>
+
+        <!-- Part-Time Section -->
+        <h3 class="text-center" id="part-time-header" style="margin-top: 50px;">Part-Time</h3>
+        <div id="part-time-container" class="row justify-content-center"></div>
     </div>
 </div>
 
@@ -28,16 +36,15 @@
             <img id="modal-image" class="modal-image" alt="Personnel Image">
             <h5 id="modal-name"></h5>
             <p id="modal-position"></p>
-            <p id="modal-contact"></p>
             <p id="modal-location"></p>
+            <p id="modal-contact"></p>
+          
         </div>
     </div>
 </div>
 
+
+<!--script-->
 <script src="{% static 'js/personnel.js' %}"></script>
-<script src="{% static 'js/timer.js' %}"></script>
-<script>
-    var redirectUrl = "{% url 'index' %}"
-</script>
 
 {% endblock %}

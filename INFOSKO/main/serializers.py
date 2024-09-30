@@ -9,4 +9,4 @@ class ItemSerializer(serializers.ModelSerializer):
 class PersonnelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Personnel
-        fields = ['name', 'position', 'contact', 'location', 'image']
+        fields = '__all__'

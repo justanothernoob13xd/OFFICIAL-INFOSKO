@@ -21,6 +21,7 @@
                 <li>Classroom is <span style="color: red; font-weight: 700;">RED</span> when Occupied.</li>
             </ul>
             <h3>Room Schedules for {{ current_day }}</h3>
+            <p id="currentDate" class="font-weight-bold"></p> <!-- Placeholder for current date -->
             <div class="d-flex p-1" id="roomContainer" style="gap: 10px">
                 {% for classroom in rooms %}
                 <div id="room-{{ classroom.id }}" class="p-4 card rooms text-center font-weight-bold {% if classroom.isOccupied %}bg-danger{% else %}bg-success{% endif %}" style="width: 150px; height: 120px;" data-toggle="modal" data-target="#roomModal" data-id="{{ classroom.id }}">
@@ -159,8 +160,19 @@
 
         // Initial details update
         updateRoomDetails();
+
+        // Display current date in real-time
+        function displayCurrentDate() {
+            var currentDate = new Date().toLocaleDateString();
+            $("#currentDate").text(currentDate);
+        }
+
+        // Update current date every day
+        setInterval(displayCurrentDate, 86400000);  // 24 hours in milliseconds
+
+        // Initial date display
+        displayCurrentDate();
     });
 </script>
-
 
 {% endblock %}

@@ -85,6 +85,7 @@ def get_rooms(request):
 def room_modal(request, roomid):
     room = get_object_or_404(Room, id=roomid)
     current_day = timezone.localtime().strftime('%A')
+    current_date = timezone.localtime().date()
     schedule = RoomSchedule.objects.filter(room_id=roomid, day_of_week=current_day)
 
     # Print debug information
@@ -108,6 +109,7 @@ def room_modal(request, roomid):
 def check_occupancy(request, roomid):
     room = get_object_or_404(Room, id=roomid)
     current_day = timezone.localtime().strftime('%A')
+    current_date = timezone.localtime().date()
     current_time = timezone.localtime().time()
 
     schedule = RoomSchedule.objects.filter(room_id=room, day_of_week=current_day)

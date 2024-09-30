@@ -109,27 +109,45 @@
 
 }
 
-/*Faculties*/
-.container-fluid {
-    min-height: 200vh; /* 100vh = 100% viewport height */
-  }
+/*Faculty Members*/
+/* Key Personnel Section */
+.key-personnel-container {
+    display: flex;
+    flex-direction: column; 
+    align-items: center; /* Center the rows */
+    margin-bottom: 50px;
+}
 
+.key-personnel-row {
+    display: flex;
+    justify-content: center; /* Center the images in each row */
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.key-personnel-row:nth-child(2) {
+    gap: 30px; /* Adds some space between the bottom personnel */
+}
+
+/* Personnel Images */
 .person-image-container {
     position: relative;
-    display:inline-block;
+    display: inline-block;
+    text-align: center;
+    margin: 10px;
     cursor: pointer;
 }
 
 .person-image {
     border-radius: 50%;
-    width: 170px;
-    height: 170px;
+    width: 150px;
+    height: 150px;
     border: 2px solid black;
 }
 
 .person-name {
-    margin-top: 10px;
-    font-size: 18px;
+    margin-top: 5px;
+    font-size: 20px;
     font-weight: bold;
 }
 
@@ -149,12 +167,13 @@
     align-items: center;
 }
 
-.modal-dialog {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh; /* Full viewport height */
+#modal-name {
+    font-size: 24px;     /* Larger font size */
+    font-weight: bold;   /* Bold font */
+    text-align: center;  /* Center the name */
+    margin-bottom: 20px; /* Add spacing below the name */
 }
+
 
 .modal-content {
     padding: 20px;
@@ -164,6 +183,14 @@
     text-align:left;
     margin: auto;
     margin-top: 200px;
+}
+
+#modal-position, #modal-contact, #modal-location {
+    font-size: 20px;  
+    font-weight: bold;   /* Decent font size */
+    text-align: left;    /* Align text to the left */
+    margin-bottom: 10px; /* Add spacing between the elements */
+    width: 100%;         /* Full width for alignment */
 }
 
 .modal-body {
@@ -187,7 +214,7 @@
     font-size: 28px;
     font-weight: bold;
     position: absolute;
-    z-index: 1;
+    z-index: 5;
     top: 10px;
     right: 20px;
 }
@@ -197,6 +224,22 @@
     color: black;
     text-decoration: none;
     cursor: pointer;
+}
+
+/* Full-Time and Part-Time Sections */
+.personnel-section {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+#full-time-header, #part-time-header {
+    margin-top: 30px;
+}
+
+#key-persons-header {
+    margin-top: 20px;
+    font-size: 1.8rem;
 }
 
 

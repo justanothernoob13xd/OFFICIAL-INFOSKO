@@ -10,7 +10,7 @@
     <link rel="icon" href="{% static '/images/favicon.ico' %}" type="image/x-icon">
     <!--bootstrap and js dependencies-->
     <link href="{% static 'css/bootstrap.css' %}" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="{% static 'js/jquery.min.js' %}"></script>
     <script src="{% static 'js/popper.min.js' %}"></script>
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
     
@@ -31,7 +31,7 @@
         
         <div class="button-container text-center mt-5 mb-4">
             <div class="button-wrapper">
-                <a href="{% url 'navigation' %}" class="btn btn-custom btn-lg bg-warning">NAVIGATE</a>
+                <a href="{% url 'navigation' %}" class="btn btn-custom btn-lg bg-warning">FLOOR - PLAN</a>
                 <p class="btn-description lead">NAVIGATE THE CAMPUS EASILY WITH THIS INFORMATION SYSTEM</p>
             </div>
 
