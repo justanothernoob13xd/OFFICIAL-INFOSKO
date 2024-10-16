@@ -41,7 +41,6 @@ def thrdfloor(request):
 def fourthfloor(request):
     return render(request, 'main/fourthfloor.html')
 
-#Functionality for faculties
 def faculties(request):
     personnel = Personnel.objects.all()
     context = {
@@ -50,18 +49,39 @@ def faculties(request):
     return render(request, 'main/faculties.html', context)
 
 def personnel_list(request):
-    personnel = Personnel.objects.all()
+    search_query = request.GET.get('search', '')
+
+    if search_query:
+        personnel = Personnel.objects.filter(name__icontains=search_query)
+    else:
+        personnel = Personnel.objects.all()
+
     personnel_data = [
         {
+            'id': person.id,
             'name': person.name,
             'position': person.position,
             'contact': person.contact,
             'location': person.location,
-            'image': person.image.url if person.image else ''
+            'image': person.image.url if person.image else 'https://via.placeholder.com/150',  # Use a placeholder if no image
+            'employment_type': person.employment_type
         }
         for person in personnel
     ]
+
     return JsonResponse(personnel_data, safe=False)
+
+def personnel_suggestions(request):
+    search_term = request.GET.get('search', '')
+    if search_term:
+        # Filter the personnel based on the search term (case insensitive)
+        personnels = Personnel.objects.filter(name__icontains=search_term)
+        data = [
+            {"id": personnel.id, "name": personnel.name}
+            for personnel in personnels
+        ]
+        return JsonResponse(data, safe=False)
+    return JsonResponse([], safe=False)  # Return an empty list if no search term
 
 #Functionality for Classroom
 def classroom(request):

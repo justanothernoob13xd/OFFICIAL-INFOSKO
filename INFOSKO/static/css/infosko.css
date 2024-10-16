@@ -242,4 +242,9 @@
     font-size: 1.8rem;
 }
 
-
+#no-results-message {
+    font-size: 18px;
+    color: red;
+    text-align: center;
+    margin-top: 20px;
+}

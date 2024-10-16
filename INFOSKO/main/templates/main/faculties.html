@@ -5,11 +5,24 @@
 
 {% block content %}
 <!-- NAVBAR -->
-<nav class="navbar navbar-expand-lg navbar-custom justify-content">
+<nav class="navbar navbar-expand-lg navbar-custom justify-content-between align-items-center">
+    <!-- Back Button -->
     <div class="back-button mb-3 mt-2">
         <a href="{% url 'index' %}" class="btn btn-warning btn-lg">Back</a>
     </div>
-    <a class="navbar-brand ml-5">FACULTY MEMBERS</a>
+    
+    <!-- Flexbox to keep "FACULTY MEMBERS" aligned left -->
+    <div class="d-flex flex-grow-1 justify-content-between align-items-center">
+        <!-- Faculty Members Header -->
+        <a class="navbar-brand ml-5" style="flex-shrink: 0;">FACULTY MEMBERS</a>
+        
+        <!-- Search Bar -->
+        <div class="search-bar d-flex" style="max-width: 300px; text-align: right;">
+            <input type="text" id="search-input" placeholder="Search for personnel...">
+            <ul id="suggestions-list" class="list-group"></ul>
+            <button id="search-button" class="btn btn-primary ml-2">Search</button>
+        </div>
+    </div>
 </nav>
 
 <!-- Body -->
@@ -25,6 +38,9 @@
         <!-- Part-Time Section -->
         <h3 class="text-center" id="part-time-header" style="margin-top: 50px;">Part-Time</h3>
         <div id="part-time-container" class="row justify-content-center"></div>
+
+        <!--Error Message-->
+        <div id="no-results-message" style="display:none; color:red; font-size:18px; text-align:center;"></div>     
     </div>
 </div>
 
@@ -38,7 +54,6 @@
             <p id="modal-position"></p>
             <p id="modal-location"></p>
             <p id="modal-contact"></p>
-          
         </div>
     </div>
 </div>
