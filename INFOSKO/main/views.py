@@ -2,30 +2,19 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.utils import timezone
 from rest_framework import viewsets
-from rest_framework.decorators import api_view
-from rest_framework.response import Response    
 from .models import Personnel, Item, Room, RoomSchedule
 from .serializers import PersonnelSerializer, ItemSerializer
 
-
-#API TESTING
+# API Views
 class ItemViewSet(viewsets.ModelViewSet):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
 
-# API ViewSet for Personnel
 class PersonnelViewSet(viewsets.ModelViewSet):
     queryset = Personnel.objects.all()
     serializer_class = PersonnelSerializer
 
-# API endpoint
-@api_view(['GET'])
-def personnel_list(request):
-    personnel = Personnel.objects.all()
-    serializer = PersonnelSerializer(personnel, many=True)
-    return Response(serializer.data)
-
-# HTML views//BACK FUNCTION
+# HTML Views
 def index(request):
     return render(request, 'main/index.html')
 
@@ -43,47 +32,62 @@ def fourthfloor(request):
 
 def faculties(request):
     personnel = Personnel.objects.all()
+    personnel_list = [
+        {
+            'name': person.name,
+            'employment_type': person.employment_type,
+            'display_position': person.display_position(),
+            'department_position': person.department_position  # Direct access for testing
+        }
+        for person in personnel
+    ]
     context = {
-        'personnel': personnel
+        'personnel_list': personnel_list
     }
     return render(request, 'main/faculties.html', context)
 
+def display_position(self):
+    if self.employment_type == 'key-person':  # Direct string match as a test
+        return self.department_position
+    return ''
+
 def personnel_list(request):
     search_query = request.GET.get('search', '')
-
-    if search_query:
-        personnel = Personnel.objects.filter(name__icontains=search_query)
-    else:
-        personnel = Personnel.objects.all()
-
+    personnel = Personnel.objects.filter(name__icontains=search_query)
     personnel_data = [
         {
             'id': person.id,
             'name': person.name,
-            'position': person.position,
             'contact': person.contact,
             'location': person.location,
-            'image': person.image.url if person.image else 'https://via.placeholder.com/150',  # Use a placeholder if no image
-            'employment_type': person.employment_type
+            'image': person.image.url if person.image else 'https://via.placeholder.com/150',
+            'employment_type': person.employment_type,
+            'department_position': person.display_position(),
         }
         for person in personnel
     ]
-
+    print("Personnel List (Debug):", personnel_data)  # Corrected line
     return JsonResponse(personnel_data, safe=False)
+
+
 
 def personnel_suggestions(request):
     search_term = request.GET.get('search', '')
     if search_term:
-        # Filter the personnel based on the search term (case insensitive)
         personnels = Personnel.objects.filter(name__icontains=search_term)
         data = [
-            {"id": personnel.id, "name": personnel.name}
+            {
+                "id": personnel.id,
+                "name": personnel.name,
+                "employment_type": personnel.employment_type,
+                "department_position": personnel.department_position if personnel.employment_type == 'key-person' else ''
+            }
             for personnel in personnels
         ]
         return JsonResponse(data, safe=False)
-    return JsonResponse([], safe=False)  # Return an empty list if no search term
+    return JsonResponse([], safe=False)
 
-#Functionality for Classroom
+# Classroom Functions
 def classroom(request):
     rooms = Room.objects.all()
     current_day = timezone.localtime().strftime('%A')
@@ -96,7 +100,7 @@ def get_rooms(request):
         {
             'id': room.id,
             'number': room.number,
-            'isOccupied': room.isOccupied,  # Adjust according to your model
+            'isOccupied': room.isOccupied,
             'timestamp': timezone.now().timestamp()
         } for room in rooms
     ]
@@ -105,37 +109,19 @@ def get_rooms(request):
 def room_modal(request, roomid):
     room = get_object_or_404(Room, id=roomid)
     current_day = timezone.localtime().strftime('%A')
-    current_date = timezone.localtime().date()
     schedule = RoomSchedule.objects.filter(room_id=roomid, day_of_week=current_day)
-
-    # Print debug information
-    print(f"Room ID: {roomid}")
-    print(f"Current Day: {current_day}")
-    print(f"Schedules: {schedule}")
-
-    # Get the current time
     current_time = timezone.localtime().time()
-
-    # Check if current time is within any schedule
     is_occupied = any(sch.time_start <= current_time <= sch.time_end for sch in schedule)
-
-    # Update the room's isOccupied field
     room.isOccupied = is_occupied
     room.save()
-
     return render(request, 'main/room_modal.html', {'room': room, 'schedule': schedule})
 
-        
 def check_occupancy(request, roomid):
     room = get_object_or_404(Room, id=roomid)
     current_day = timezone.localtime().strftime('%A')
-    current_date = timezone.localtime().date()
     current_time = timezone.localtime().time()
-
     schedule = RoomSchedule.objects.filter(room_id=room, day_of_week=current_day)
     is_occupied = any(sch.time_start <= current_time <= sch.time_end for sch in schedule)
-
     room.isOccupied = is_occupied
     room.save()
-
     return JsonResponse({'id': room.id, 'isOccupied': room.isOccupied})

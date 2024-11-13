@@ -233,18 +233,27 @@
     justify-content: center;
 }
 
-#full-time-header, #part-time-header {
-    margin-top: 30px;
-}
-
 #key-persons-header {
     margin-top: 20px;
     font-size: 1.8rem;
 }
 
-#no-results-message {
-    font-size: 18px;
+#no-results-container {
+    display: flex;
+    justify-content: center;  /* Centers horizontally */
+    align-items: center;      /* Centers vertically */
+    height: 450px;            /* Adjust this as needed */
+}
+
+#no-results-alert {
+    font-size: 30px;
     color: red;
     text-align: center;
-    margin-top: 20px;
+    margin-top: 35px;
 }
+
+/* Style for the red border when search input is empty */
+#input-error {
+    border: 1px solid red;  /* Red border to highlight error */
+}
+

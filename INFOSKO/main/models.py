@@ -8,27 +8,26 @@ class Personnel(models.Model):
     KEY_PERSON = 'key-person'
 
     EMPLOYMENT_TYPE_CHOICES = [
-        (SELECT, 'Select'),  # Placeholder option
+        (SELECT, 'Select'),
         (FULL_TIME, 'Full-Time'),
         (PART_TIME, 'Part-Time'),
         (KEY_PERSON, 'Key Person'),
     ]
 
     name = models.CharField(max_length=100)
-    position = models.CharField(max_length=100)
     contact = models.CharField(max_length=100)
     location = models.CharField(max_length=100)
     image = models.ImageField(upload_to='personnel_images/', null=True, blank=True)
-    employment_type = models.CharField(
-        max_length=10,
-        choices=EMPLOYMENT_TYPE_CHOICES,
-        default=SELECT,  # Set the placeholder as default
-    )
+    department_position = models.CharField(max_length=255, blank=True, null=True)
+    employment_type = models.CharField(max_length=50, choices=EMPLOYMENT_TYPE_CHOICES)
 
+    def display_position(self):
+        return self.department_position if self.employment_type == self.KEY_PERSON else ''
 
     def __str__(self):
         return self.name
-    
+
+
 class Item(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
