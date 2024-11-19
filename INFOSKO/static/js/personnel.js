@@ -1,5 +1,6 @@
-// Track if the modal has been closed to avoid accidental re-filters
+// Track if modal has been closed to avoid accidental re-filters
 let modalJustClosed = false;
+let noResultsAlertVisible = false; 
 
 // Debounce function for limiting search requests
 function debounce(func, delay) {
@@ -10,105 +11,99 @@ function debounce(func, delay) {
     };
 }
 
-// Fetch personnel without redundant filtering
-function fetchPersonnel(searchQuery = '') {
-    if (modalJustClosed) {
-        modalJustClosed = false; // Reset modal flag after search completes
-    }
+// Track the last search query to avoid redundant searches
+let lastSearchQuery = '';
 
-    clearHeaders();
-    $('#no-results-alert').hide();
-    $('#go-back-link').hide();
+// Enhanced text normalization to handle variations in spaces, punctuation, and casing
+function normalizeText(text) {
+    return text.toLowerCase().replace(/\s+/g, '').replace(/[.\-]/g, '');  // Removes spaces, dots, and hyphens
+}
 
-    $.ajax({
-        url: '/api/personnel-list/',
-        data: { search: searchQuery },
-        success: function(data) {
-            if (searchQuery && data.length === 1) {
-                openPersonnelModal(data[0]); // Open modal if exactly one result
-            } else if (data.length > 0) {
-                updatePersonnelLayout(data); // Display list if multiple results
-            } else {
-                $('#no-results-alert').html('Sorry, no personnel found. <a href="#" id="go-back-link" style="text-decoration: underline;">Go back</a>').show();
-            }
-        },
-        error: function() {
-            $('#no-results-alert').text('Error fetching personnel information.').show();
+// Fetch personnel with exact match handling
+function hideModal() {
+    $('#personnelModal').fadeOut(500, function () {
+        // Restore the "no results" message only if it was previously visible
+        if ($('#no-results-alert').is(':visible')) {
+            $('#no-results-alert').fadeIn(500); // Ensure the message is displayed consistently
         }
     });
 }
 
-// Debounced function for limiting search requests timing
-const debouncedFetchPersonnel = debounce(fetchPersonnel, 300);
-
-
-// Function to open the personnel modal with data
-function openPersonnelModal(person) {
-    $('#modal-name').text(person.name);
-    $('#modal-location').text('Location: ' + person.location);
-    $('#modal-contact').text('Contact: ' + person.contact);
-    $('#modal-image').attr('src', person.image || 'https://via.placeholder.com/150');
-
-    if (person.display_position) {
-        $('#modal-position').html(`<span class="university-position">Position: ${person.display_position}</span>`);
-    } else {
-        $('#modal-position').text(''); // Leave blank if position is unavailable
-    }
-    
-    $('#personnelModal').fadeIn(400);
+// Function to clear personnel display layout
+function clearPersonnelDisplay() {
+    clearHeaders();
+    $('#key-persons-container, #full-time-container, #part-time-container').hide();
+    noResultsAlertVisible = true; // Track visibility state for "No Results"
 }
 
-// Reset `modalJustClosed` when modal is hidden, to avoid immediate re-filtering
-$('#personnelModal').on('hidden.bs.modal', function () {
-    modalJustClosed = true;
-});
-
-// Function to hide modal
-$(document).on('click', '#personnelModal', function(event) {
-    if (!$(event.target).closest('.modal-content').length) {
-        $('#personnelModal').fadeOut(400);
-    }
-});
-
-// Hide modal when clicking outside of content
-$(document).on('click', '#personnelModal', function(event) {
-    if (!$(event.target).closest('.modal-content').length) {
-        $('#personnelModal').fadeOut(400);
-    }
-});
-
-// Search button functionality
-$('#search-button').on('click', function() {
-    modalJustClosed = false;
-    const searchQuery = $('#search-input').val().trim();
-
-    // If searchQuery exists, reset error indicators and perform search
-    if (searchQuery) {
-        $('#search-input').removeClass('is-invalid');
-        $('#no-results-alert').hide();
-        debouncedFetchPersonnel(searchQuery);
-    } else {
-        $('#search-input').addClass('is-invalid');
-        $('#search-input').attr('placeholder', 'Please enter a name');
-    }
-});
-
-
-// Clear headers to reset personnel display layout
-function clearHeaders() {
-    $('#key-persons-container, #full-time-container, #part-time-container').empty();
-    $('#full-time-header, #part-time-header').hide();
-}
-
-// "Go Back" link to reset personnel display and search input
-$(document).on('click', '#go-back-link', function(event) {
+// Update the "Go Back" link functionality
+$(document).on('click', '#go-back-link', function (event) {
     event.preventDefault();
     lastSearchQuery = '';
-    fetchPersonnel(); // Reset personnel display
-    $('#full-time-header, #part-time-header, #key-persons-header').show();
+    noResultsAlertVisible = false; // Reset visibility state
+    fetchPersonnel(); // Reset display to show all personnel
     $('#no-results-alert').hide();
     $('#go-back-link').hide();
     $('#search-input').removeClass('is-invalid');
+    $('#search-input').val(''); // Clear search input
+    $('#key-persons-container, #full-time-container, #part-time-container').show(); // Restore containers
+});
+
+// Improved fetchPersonnel function to handle modal restoration
+function fetchPersonnel(searchQuery = '', triggerModal = false) {
+    const normalizedQuery = normalizeText(searchQuery);
+
+    if (!triggerModal) {
+        clearHeaders();
+    }
+
+    $.ajax({
+        url: '/api/personnel-list/',
+        data: { search: searchQuery },
+        success: function (data) {
+            const exactMatch = data.find(person => normalizeText(person.name) === normalizedQuery);
+
+            if (triggerModal && exactMatch) {
+                openPersonnelModal(exactMatch);
+            } else if (triggerModal) {
+                noResultsAlertVisible = true;
+                clearPersonnelDisplay();
+                $('#no-results-alert')
+                    .html('Sorry, no personnel found. <a href="#" id="go-back-link" style="text-decoration: underline;">Go back</a>')
+                    .fadeIn(500);
+            } else if (data.length === 0) {
+                noResultsAlertVisible = true;
+                clearPersonnelDisplay();
+                $('#no-results-alert')
+                    .html('Sorry, no personnel found. <a href="#" id="go-back-link" style="text-decoration: underline;">Go back</a>')
+                    .fadeIn(500);
+            } else {
+                noResultsAlertVisible = false; // Reset alert visibility state
+                $('#no-results-alert').hide();
+                updatePersonnelLayout(data);
+            }
+        },
+        error: function () {
+            $('#no-results-alert').text('Error fetching personnel information.').fadeIn(500);
+        }
+    });
+}
+
+// Debounced function to control fetch timing
+const debouncedFetchPersonnel = debounce(fetchPersonnel, 300);
+
+// Search button functionality with trigger for modal on exact match
+$('#search-button').on('click', function() {
+    modalJustClosed = false;
+    const searchQuery = $('#search-input').val().trim();
+    if (searchQuery) {
+        $('#search-input').removeClass('is-invalid');
+        $('#no-results-alert').hide();
+        fetchPersonnel(searchQuery, true);  // Set triggerModal to true for search button click
+    } else {
+        $('#search-input').addClass('is-invalid');
+        $('#search-input').attr('placeholder', 'Please enter a name or keyword to search');
+    }
 });
 
 // Autocomplete for search input with debounced fetching of suggestions
@@ -133,7 +128,8 @@ $('#search-input').autocomplete({
     }, 300),
     
     select: function(event, ui) {
-        modalJustClosed = true;  // Prevents immediate re-search on close
+        modalJustClosed = true;
+        
         $.ajax({
             url: `/api/personnel/${ui.item.id}/`,
             method: 'GET',
@@ -148,44 +144,139 @@ $('#search-input').autocomplete({
     minLength: 2
 });
 
-// Handle search input to trigger real-time layout update with debounce
-$('#search-input').on('input', function() {
-    const searchQuery = $(this).val().trim();
+// Reset `modalJustClosed` when modal is hidden, to avoid immediate re-filtering
+$('#personnelModal').on('hidden.bs.modal', function () {
+    modalJustClosed = true;
 
-    if (searchQuery !== lastSearchQuery) {
-        lastSearchQuery = searchQuery;
-        debouncedFetchPersonnel(searchQuery);
+    // Do not reset the page if personnel results are already displayed
+    if (!noResultsAlertVisible) {
+        return;
+    }
+
+    // Restore "No Results" state if applicable
+    $('#no-results-alert').show();
+    $('#go-back-link').show();
+});
+
+// Function to open the personnel modal with data
+function openPersonnelModal(person) {
+    $('#modal-name').text(person.name);
+    $('#modal-location').text('Location: ' + person.location);
+    $('#modal-contact').text('Contact: ' + person.contact);
+    $('#modal-image').attr('src', person.image || 'https://via.placeholder.com/150');
+    if (person.display_position) {
+        $('#modal-position').html(`<span class="university-position">Position: ${person.display_position}</span>`);
+    } else {
+        $('#modal-position').text('');
+    }
+
+    // Fade out alert when opening modal, if visible
+    if ($('#no-results-alert').is(':visible')) {
+        $('#no-results-alert').fadeOut(500); // Smooth fade out
+    }
+
+    $('#personnelModal').fadeIn(500); // Show modal
+}
+
+// Function to handle modal closing and restore "No Results" state
+function hideModal() {
+    $('#personnelModal').fadeOut(500, function () {
+        if (noResultsAlertVisible) {
+            $('#no-results-alert').fadeIn(500); // Restore alert smoothly
+        }
+    });
+}
+
+// Event to hide modal when clicking outside modal content or on close button
+$(document).on('click', '#personnelModal, .close-modal', function(event) {
+    if (!$(event.target).closest('.modal-content').length || $(event.target).hasClass('close-modal')) {
+        hideModal();
     }
 });
 
-// Function to create the layout for personnel display
+// Function to clear personnel display layout
+function clearHeaders() {
+    $('#key-persons-container, #full-time-container, #part-time-container').empty();
+    $('#full-time-header, #part-time-header, #key-persons-header').hide();
+}
+
+// Function to clear personnel display layout
+function clearPersonnelDisplay() {
+    // Hide and clear all personnel containers and headers
+    $('#key-persons-container, #full-time-container, #part-time-container').empty().hide();
+    $('#full-time-header, #part-time-header, #key-persons-header').hide(); // Ensure headers are hidden
+    noResultsAlertVisible = true; // Mark that "No Results" state is active
+}
+
+
+// "Go Back" link to reset personnel display and search input
+$(document).on('click', '#go-back-link', function (event) {
+    event.preventDefault();
+    lastSearchQuery = '';
+    noResultsAlertVisible = false; // Reset alert visibility state
+    fetchPersonnel(); // Reset personnel display
+    $('#no-results-alert').fadeOut(500); // Smooth fade-out
+    $('#go-back-link').fadeOut(500);
+    $('#search-input').removeClass('is-invalid').val(''); // Clear search input
+    $('#key-persons-container, #full-time-container, #part-time-container').fadeIn(500); // Restore containers
+});
+
+// Function to update the personnel layout when multiple results are found
+function updatePersonnelLayout(data) {
+    // Clear all containers
+    const keyPersonsContainer = $('#key-persons-container').empty().show();
+    const fullTimeContainer = $('#full-time-container').empty().show();
+    const partTimeContainer = $('#part-time-container').empty().show();
+
+    // Filter data into categories
+    const keyPersons = data.filter(person => person.employment_type === 'key-person');
+    const fullTimePersonnel = data.filter(person => person.employment_type === 'full-time');
+    const partTimePersonnel = data.filter(person => person.employment_type === 'part-time');
+
+    // Handle visibility of headers based on data
+    if (fullTimePersonnel.length > 0) {
+        $('#full-time-header').show();
+    } else {
+        $('#full-time-header').hide();
+    }
+
+    if (partTimePersonnel.length > 0) {
+        $('#part-time-header').show();
+    } else {
+        $('#part-time-header').hide();
+    }
+
+    if (keyPersons.length > 0) {
+        $('#key-persons-header').show();
+    } else {
+        $('#key-persons-header').hide();
+    }
+
+    // Populate containers with filtered data
+    createPersonnelLayout(keyPersons, keyPersonsContainer, 'key-person');
+    createPersonnelLayout(fullTimePersonnel, fullTimeContainer);
+    createPersonnelLayout(partTimePersonnel, partTimeContainer);
+}
+
+// Function to create the triangular hierarchy layout for personnel
 function createPersonnelLayout(personnelData, container, type = '') {
     const keyPersonnelContainer = $('<div class="key-personnel-container"></div>');
     const topRow = $('<div class="key-personnel-row"></div>');
     const bottomRow = $('<div class="key-personnel-row"></div>');
 
     personnelData.forEach((person, index) => {
-        const personPosition = person.department_position || '';
-
-        // Display position only for key-persons
-        let positionDisplay = '';
-        if (person.employment_type === 'key-person' && personPosition) {
-            positionDisplay = personPosition;
-        }
-
         const personCard = `
             <div class="person-image-container" onclick="showModal(${person.id})">
                 <img src="${person.image || 'https://via.placeholder.com/150'}" class="person-image" alt="${person.name}">
                 <h5 class="person-name">${person.name}</h5>
-                ${positionDisplay ? `<p class="person-position">${positionDisplay}</p>` : ''}
             </div>
         `;
 
         if (type === 'key-person') {
             if (index === 0) {
-                topRow.append(personCard);
+                topRow.append(personCard);  // Top row (1 person)
             } else {
-                bottomRow.append(personCard);
+                bottomRow.append(personCard);  // Bottom row (remaining persons)
             }
         } else {
             const personnelSection = $('<div class="personnel-section"></div>');
@@ -194,15 +285,8 @@ function createPersonnelLayout(personnelData, container, type = '') {
         }
     });
 
-    if (type === 'key-person') {
-        keyPersonnelContainer.append(topRow, bottomRow);
-        container.append(keyPersonnelContainer);
-    }
-
-    // Apply font size after elements are added to the DOM
-    setTimeout(() => {
-        $('.person-position').css('font-size', '20px'); // Adjust size here
-    }, 0);
+    keyPersonnelContainer.append(topRow, bottomRow);
+    container.append(keyPersonnelContainer);
 }
 
 // Function to show modal with personnel information
@@ -219,56 +303,21 @@ function showModal(id) {
         },
         error: function(error) {
             console.error('Error fetching personnel:', error);
-            $('#personnelModal').fadeOut(400);
+            hideModal();
         }
     });
 }
 
-// Function to update the personnel layout with multiple results
-function updatePersonnelLayout(data) {
-    const keyPersonsContainer = $('#key-persons-container');
-    const fullTimeContainer = $('#full-time-container');
-    const partTimeContainer = $('#part-time-container');
-
-    keyPersonsContainer.empty();
-    fullTimeContainer.empty();
-    partTimeContainer.empty();
-
-    const keyPersons = data.filter(person => person.employment_type === 'key-person');
-    const fullTimePersonnel = data.filter(person => person.employment_type === 'full-time');
-    const partTimePersonnel = data.filter(person => person.employment_type === 'part-time');
-
-    if (keyPersons.length === 0 && fullTimePersonnel.length === 0 && partTimePersonnel.length === 0) {
-        $('#no-results-alert').html('Sorry, no personnel found. <a href="#" id="go-back-link" style="text-decoration: underline;">Go back</a>').show();
-    } else {
-        $('#no-results-alert').hide();
-        if (fullTimePersonnel.length > 0) $('#full-time-header').show();
-        if (partTimePersonnel.length > 0) $('#part-time-header').show();
-        if (keyPersons.length > 0) $('#key-persons-header').show();
+// Auto-refresh personnel layout every 5 minutes
+setInterval(() => {
+    if (lastSearchQuery && !modalJustClosed) {
+        fetchPersonnel(lastSearchQuery);
     }
+}, 300000); // 300000ms = 5 minutes
 
-    createPersonnelLayout(keyPersons, keyPersonsContainer, 'key-person');
-    createPersonnelLayout(fullTimePersonnel, fullTimeContainer);
-    createPersonnelLayout(partTimePersonnel, partTimeContainer);
-}
-
-
-// Auto-refresh personnel layout with timer while modal is closed
-function autoRefreshPersonnel() {
-    setInterval(function () {
-        if (!$('#no-results-alert').is(':visible') && !modalJustClosed) {
-            fetchPersonnel();
-        }
-    }, 10000);  // Adjust interval time (e.g., 10 seconds)
-}
-
-// Start auto-refresh
-autoRefreshPersonnel();
-
-// Initialize the auto-refresh and fetch personnel on page load
+// Initialize personnel display on page load
 $(document).ready(function() {
-    fetchPersonnel();  // Load personnel data without search query (initial load)
-    autoRefreshPersonnel();  // Start auto-refresh for dynamic updates
+    fetchPersonnel(); // Initial call to display all personnel
 });
 
 // Idle timer function to redirect to index after 30 seconds of inactivity
