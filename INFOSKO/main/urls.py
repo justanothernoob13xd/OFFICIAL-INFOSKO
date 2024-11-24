@@ -1,4 +1,6 @@
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 from .views import PersonnelViewSet, index, faculties, navigation, secfloor, thrdfloor, fourthfloor, personnel_list, personnel_suggestions, classroom, get_rooms, room_modal, check_occupancy
 
@@ -21,3 +23,6 @@ urlpatterns = [
     path('classroom/<int:roomid>/', room_modal, name='room_modal'),
     path('check_occupancy/<int:roomid>/', check_occupancy, name='check_occupancy'),
 ]
+
+if settings.DEBUG:  # Only serve media files in development
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

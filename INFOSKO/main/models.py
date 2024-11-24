@@ -14,19 +14,26 @@ class Personnel(models.Model):
         (KEY_PERSON, 'Key Person'),
     ]
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)  # Ensures unique names
     contact = models.CharField(max_length=100)
     location = models.CharField(max_length=100)
-    image = models.ImageField(upload_to='personnel_images/', null=True, blank=True)
+    image = models.ImageField(upload_to='personnel_images/', null=True, blank=True, default='defaultpic.jpg')  # Default image
     department_position = models.CharField(max_length=255, blank=True, null=True)
-    employment_type = models.CharField(max_length=50, choices=EMPLOYMENT_TYPE_CHOICES)
+    employment_type = models.CharField(max_length=50, choices=EMPLOYMENT_TYPE_CHOICES, default=SELECT)  # Default to SELECT
+    created_at = models.DateTimeField(auto_now_add=True)  # For automated logs
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        """Ensure data consistency."""
+        if self.employment_type == self.KEY_PERSON and not self.department_position:
+            raise ValidationError('Key Person must have a department position.')
 
     def display_position(self):
+        """Display department position only for key persons."""
         return self.department_position if self.employment_type == self.KEY_PERSON else ''
 
     def __str__(self):
         return self.name
-
 
 class Item(models.Model):
     name = models.CharField(max_length=100)

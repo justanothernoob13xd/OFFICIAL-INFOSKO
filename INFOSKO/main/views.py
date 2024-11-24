@@ -30,30 +30,39 @@ def thrdfloor(request):
 def fourthfloor(request):
     return render(request, 'main/fourthfloor.html')
 
+from django.db.models import Case, When, Value, CharField
+from django.core.paginator import Paginator
+from django.http import JsonResponse
+from .models import Personnel
+
+
 def faculties(request):
-    personnel = Personnel.objects.all()
-    personnel_list = [
-        {
-            'name': person.name,
-            'employment_type': person.employment_type,
-            'display_position': person.display_position(),
-            'department_position': person.department_position  # Direct access for testing
-        }
-        for person in personnel
-    ]
+    """Fetch all personnel and annotate display_position dynamically."""
+    personnel = Personnel.objects.annotate(
+        display_position=Case(
+            When(employment_type=Personnel.KEY_PERSON, then='department_position'),
+            default=Value('', output_field=CharField())
+        )
+    )
     context = {
-        'personnel_list': personnel_list
+        'personnel_list': personnel
     }
     return render(request, 'main/faculties.html', context)
 
-def display_position(self):
-    if self.employment_type == 'key-person':  # Direct string match as a test
-        return self.department_position
-    return ''
 
 def personnel_list(request):
+    """Fetch personnel based on search query and paginate the results."""
     search_query = request.GET.get('search', '')
-    personnel = Personnel.objects.filter(name__icontains=search_query)
+    personnel = Personnel.objects.filter(name__icontains=search_query).annotate(
+        display_position=Case(
+            When(employment_type=Personnel.KEY_PERSON, then='department_position'),
+            default=Value('', output_field=CharField())
+        )
+    )
+    paginator = Paginator(personnel, 10)  # Paginate 10 items per page
+    page_number = request.GET.get('page', 1)
+    personnel_page = paginator.get_page(page_number)
+
     personnel_data = [
         {
             'id': person.id,
@@ -62,30 +71,35 @@ def personnel_list(request):
             'location': person.location,
             'image': person.image.url if person.image else 'https://via.placeholder.com/150',
             'employment_type': person.employment_type,
-            'department_position': person.display_position(),
+            'department_position': person.display_position,
         }
-        for person in personnel
+        for person in personnel_page
     ]
-    print("Personnel List (Debug):", personnel_data)  # Corrected line
     return JsonResponse(personnel_data, safe=False)
 
 
-
 def personnel_suggestions(request):
+    """Return personnel suggestions for a search term."""
     search_term = request.GET.get('search', '')
     if search_term:
-        personnels = Personnel.objects.filter(name__icontains=search_term)
+        personnel = Personnel.objects.filter(name__icontains=search_term).annotate(
+            display_position=Case(
+                When(employment_type=Personnel.KEY_PERSON, then='department_position'),
+                default=Value('', output_field=CharField())
+            )
+        )
         data = [
             {
-                "id": personnel.id,
-                "name": personnel.name,
-                "employment_type": personnel.employment_type,
-                "department_position": personnel.department_position if personnel.employment_type == 'key-person' else ''
+                "id": person.id,
+                "name": person.name,
+                "employment_type": person.employment_type,
+                "department_position": person.display_position
             }
-            for personnel in personnels
+            for person in personnel
         ]
         return JsonResponse(data, safe=False)
-    return JsonResponse([], safe=False)
+    return JsonResponse({'message': 'No search term provided', 'data': []}, safe=False)
+
 
 # Classroom Functions
 def classroom(request):

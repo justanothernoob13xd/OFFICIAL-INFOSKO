@@ -108,40 +108,48 @@ $('#search-button').on('click', function() {
 
 // Autocomplete for search input with debounced fetching of suggestions
 $('#search-input').autocomplete({
-    source: debounce(function(request, response) {
+    source: debounce(function (request, response) {
+        // AJAX call to fetch suggestions from the backend
         $.ajax({
             url: '/api/personnel-suggestions/',
             data: { search: request.term },
-            success: function(data) {
-                response($.map(data, function(person) {
+            success: function (data) {
+                response($.map(data, function (person) {
+                    // Modify label: exclude employment type only for "Key - Person"
+                    let label = person.name;
+                    if (person.employment_type !== 'key-person') {
+                        label += ` (${person.employment_type.replace('-', ' ')})`;
+                    }
+                    
                     return {
-                        label: `${person.name} (${person.employment_type.replace('-', ' ')})`,
+                        label: label, // Adjusted label
                         value: person.name,
-                        id: person.id
+                        id: person.id,
                     };
                 }));
             },
-            error: function(error) {
+            error: function (error) {
                 console.error('Error fetching suggestions:', error);
-            }
-        });
-    }, 300),
-    
-    select: function(event, ui) {
-        modalJustClosed = true;
-        
-        $.ajax({
-            url: `/api/personnel/${ui.item.id}/`,
-            method: 'GET',
-            success: function(person) {
-                openPersonnelModal(person);
             },
-            error: function(error) {
+        });
+    }, 300), // Debounce AJAX call to limit requests
+    select: function (event, ui) {
+        // Triggered when a dropdown item is selected
+        modalJustClosed = true;
+
+        // Fetch full personnel details for the selected item
+        $.ajax({
+            url: `/api/personnel/${ui.item.id}/`, // Get personnel by ID
+            method: 'GET',
+            success: function (person) {
+                openPersonnelModal(person); // Open modal with the personnel's details
+            },
+            error: function (error) {
                 console.error('Error fetching personnel data:', error);
-            }
+            },
         });
     },
-    minLength: 2
+    minLength: 2, // Require at least 2 characters before showing suggestions
 });
 
 // Reset `modalJustClosed` when modal is hidden, to avoid immediate re-filtering
@@ -269,9 +277,9 @@ function createPersonnelLayout(personnelData, container, type = '') {
             <div class="person-image-container" onclick="showModal(${person.id})">
                 <img src="${person.image || 'https://via.placeholder.com/150'}" class="person-image" alt="${person.name}">
                 <h5 class="person-name">${person.name}</h5>
+                ${type === 'key-person' && person.department_position ? `<p class="person-position">${person.department_position}</p>` : ''}
             </div>
         `;
-
         if (type === 'key-person') {
             if (index === 0) {
                 topRow.append(personCard);  // Top row (1 person)
@@ -284,6 +292,7 @@ function createPersonnelLayout(personnelData, container, type = '') {
             container.append(personnelSection);
         }
     });
+    
 
     keyPersonnelContainer.append(topRow, bottomRow);
     container.append(keyPersonnelContainer);
@@ -310,35 +319,42 @@ function showModal(id) {
 
 // Auto-refresh personnel layout every 5 minutes
 setInterval(() => {
-    if (lastSearchQuery && !modalJustClosed) {
-        fetchPersonnel(lastSearchQuery);
+    if (!modalJustClosed) {
+        fetchPersonnel(lastSearchQuery || ''); // Fetch all if no search query
     }
-}, 300000); // 300000ms = 5 minutes
+}, 5000); // Lower interval to 5 seconds for testing
 
 // Initialize personnel display on page load
 $(document).ready(function() {
     fetchPersonnel(); // Initial call to display all personnel
 });
 
-// Idle timer function to redirect to index after 30 seconds of inactivity
-let idleTimer, countdownTimer, countdown = 30;
+// Idle timer function to redirect to index after 1 minute of inactivity
+let idleTimer, countdownTimer, countdown = 60; // 60 seconds for 1 minute
 
 function startIdleTimer() {
-    countdown = 30;
-    countdownTimer = setInterval(function() {
+    countdown = 60; // Reset countdown to 1 minute
+    console.log("Idle timer started. Redirecting in 1 minute...");
+    countdownTimer = setInterval(function () {
         countdown--;
+        console.log(`Redirecting in ${countdown} seconds...`); // Log countdown in console
         if (countdown <= 0) {
             clearInterval(countdownTimer);
-            window.location.href = '/';
-        }   
-    }, 1000);
+            console.log("Redirecting now...");
+            window.location.href = '/'; // Redirect to the index page
+        }
+    }, 1000); // 1-second intervals
 }
 
 function resetIdleTimer() {
     clearTimeout(idleTimer);
     clearInterval(countdownTimer);
-    idleTimer = setTimeout(startIdleTimer, 30000);
+    console.log("User activity detected. Idle timer reset.");
+    idleTimer = setTimeout(startIdleTimer, 60000); // Restart idle timer for 1 minute
 }
 
-$(document).on('scroll click', resetIdleTimer);  // Reset timer on scroll or click
+// Reset timer on scroll or click
+$(document).on('scroll click', resetIdleTimer);
+
+// Start idle timer on page load
 startIdleTimer();
