@@ -18,7 +18,12 @@ class PersonnelAdmin(admin.ModelAdmin):
     class Media:
         js = ('js/custom_admin.js',)  # JavaScript to enable/disable the department_position field
 
+class RoomAdmin(admin.ModelAdmin):
+    # Override this method to hide "Rooms" from the admin index
+    def has_module_permission(self, request):
+        return False  # Prevents "Rooms" from showing in the sidebar
+
 # Register your models here.
 admin.site.register(Personnel, PersonnelAdmin)
-admin.site.register(Room)
+admin.site.register(Room, RoomAdmin)
 admin.site.register(RoomSchedule)

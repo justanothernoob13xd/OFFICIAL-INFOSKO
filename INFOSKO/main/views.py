@@ -114,7 +114,7 @@ def get_rooms(request):
         {
             'id': room.id,
             'number': room.number,
-            'isOccupied': room.isOccupied,
+            'isOccupied': room.occupied,
             'timestamp': timezone.now().timestamp()
         } for room in rooms
     ]
@@ -126,7 +126,7 @@ def room_modal(request, roomid):
     schedule = RoomSchedule.objects.filter(room_id=roomid, day_of_week=current_day)
     current_time = timezone.localtime().time()
     is_occupied = any(sch.time_start <= current_time <= sch.time_end for sch in schedule)
-    room.isOccupied = is_occupied
+    room.occupied = is_occupied
     room.save()
     return render(request, 'main/room_modal.html', {'room': room, 'schedule': schedule})
 
@@ -136,6 +136,6 @@ def check_occupancy(request, roomid):
     current_time = timezone.localtime().time()
     schedule = RoomSchedule.objects.filter(room_id=room, day_of_week=current_day)
     is_occupied = any(sch.time_start <= current_time <= sch.time_end for sch in schedule)
-    room.isOccupied = is_occupied
+    room.occupied = is_occupied
     room.save()
-    return JsonResponse({'id': room.id, 'isOccupied': room.isOccupied})
+    return JsonResponse({'id': room.id, 'isOccupied': room.occupied})

@@ -50,11 +50,10 @@ class Room(models.Model):
     def __str__(self):
         return f'Room {self.number}'
 
-#Model for room Schedule
+#Model for Room Schedule
 class RoomSchedule(models.Model):
     room_id = models.ForeignKey(Room, on_delete=models.CASCADE)
     section = models.CharField(max_length=50)
-    date = models.DateField()  # Add date field
     time_start = models.TimeField()
     time_end = models.TimeField()
     class_name = models.CharField(max_length=100)
@@ -68,6 +67,9 @@ class RoomSchedule(models.Model):
         ('Friday', 'Friday'),
         ('Saturday', 'Saturday'),
     ], default='Sunday')
+
+    class Meta:
+        verbose_name_plural = "Room Schedules"
 
     def __str__(self):
         return f'{self.room_id}'
