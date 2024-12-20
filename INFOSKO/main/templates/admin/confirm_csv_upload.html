@@ -1,0 +1,52 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+<h1>CSV Data Preview</h1>
+
+<!-- Show warnings -->
+{% if request.session.csv_warnings %}
+<div class="alert alert-warning">
+    <strong>Warnings Detected:</strong>
+    <ul>
+        {% for warning in request.session.csv_warnings %}
+        <li>
+            Row {{ warning.row }}: Missing {{ warning.missing_fields|join:", " }}
+        </li>
+        {% endfor %}
+    </ul>
+    <p>You can still proceed with the upload, but please review the data carefully.</p>
+</div>
+{% endif %}
+
+<!-- Display preview data -->
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Contact</th>
+            <th>Location</th>
+            <th>Employment Type</th>
+            <th>Department Position</th>
+            <th>Image</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in preview_data %}
+        <tr>
+            <td>{{ row.name }}</td>
+            <td>{{ row.contact }}</td>
+            <td>{{ row.location }}</td>
+            <td>{{ row.employment_type }}</td>
+            <td>{{ row.department_position }}</td>
+            <td>{{ row.image|default:"No Image Provided" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Confirmation Dialog -->
+<form method="POST">
+    {% csrf_token %}
+    <button type="submit" name="action" value="confirm" class="btn btn-success" style="margin-top: 10px;">Confirm and Upload</button>
+    <button type="submit" name="action" value="cancel" class="btn btn-danger" style="margin-top: 10px;">Cancel</button>
+</form>
+{% endblock %}
