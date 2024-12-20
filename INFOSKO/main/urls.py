@@ -1,6 +1,7 @@
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from . import views
 from rest_framework.routers import DefaultRouter
 from .views import PersonnelViewSet, index, faculties, navigation, secfloor, thrdfloor, fourthfloor, personnel_list, personnel_suggestions, classroom, get_rooms, room_modal, check_occupancy
 
@@ -11,6 +12,8 @@ router.register(r'personnel', PersonnelViewSet)
 urlpatterns = [
     path('', index, name='index'),
     path('faculties/', faculties, name='faculties'),
+    path("upload_csv/", views.upload_csv, name="upload_csv"),
+    path("confirm_csv_upload/", views.confirm_csv_upload, name="confirm_csv_upload"),
     path('navigation/', navigation, name='navigation'),
     path('secfloor/', secfloor, name='secfloor'),
     path('thrdfloor/', thrdfloor, name='thrdfloor'),

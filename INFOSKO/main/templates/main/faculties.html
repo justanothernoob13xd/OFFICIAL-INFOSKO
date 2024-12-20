@@ -18,33 +18,84 @@
     </div>
 </nav>
 
+<!--Personnel Card-->
 <div class="container-fluid mt-3">
     <div id="personnel-list" class="d-flex flex-column align-items-center">
-        <div id="key-persons-container" class="row justify-content-center mb-5"></div>
+        <div id="key-persons-container" class="row justify-content-center mb-5">
+            {% for personnel in key_persons %}
+            <div class="card m-2" style="width: 150px; text-align: center;">
+                <img 
+                src="{{ personnel.image.url|default:'/media/defaultpic.jpg' }}" 
+                alt="Personnel Image" 
+                class="card-img-top rounded-circle" 
+                style="width: 150px; height: 150px; object-fit: cover;">
+            
+                <div class="card-body">
+                    <h5 class="card-title">{{ personnel.name }}</h5>
+                    <p class="card-text">{{ personnel.position }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         <h3 class="text-center" id="full-time-header" style="margin-top: -50px;">Full-Time</h3>
-        <div id="full-time-container" class="row justify-content-center mb-5"></div>
+        <div id="full-time-container" class="row justify-content-center mb-5">
+            {% for personnel in full_time_personnel %}
+            <div class="card m-2" style="width: 150px; text-align: center;">
+                <img 
+                src="{{ personnel.image.url|default:'/media/defaultpic.jpg' }}" alt="Personnel Image" class="img-fluid" style="width:150px; height:150px;">
+                    alt="Personnel Image" 
+                    class="card-img-top rounded-circle" 
+                    style="width: 150px; height: 150px;">
+                <div class="card-body">
+                    <h5 class="card-title">{{ personnel.name }}</h5>
+                    <p class="card-text">{{ personnel.position }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         <h3 class="text-center" id="part-time-header" style="margin-top: 50px;">Part-Time</h3>
-        <div id="part-time-container" class="row justify-content-center"></div>
+        <div id="part-time-container" class="row justify-content-center">
+            {% for personnel in part_time_personnel %}
+            <div class="card m-2" style="width: 150px; text-align: center;">
+                <img 
+                src="{{ personnel.image.url|default:'/media/defaultpic.jpg' }}" alt="Personnel Image" class="img-fluid" style="width:150px; height:150px;">
+                    alt="Personnel Image" 
+                    class="card-img-top rounded-circle" 
+                    style="width: 150px; height: 150px;">
+                <div class="card-body">
+                    <h5 class="card-title">{{ personnel.name }}</h5>
+                    <p class="card-text">{{ personnel.position }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         <div id="no-results-message" style="display:none; color:red; font-size:18px; text-align:center;"></div>
     </div>
 </div>
 
-<div id="personnelModal" class="modal" onclick="hideModal(event)">
+<!-- Modal -->
+<div id="personnelModal" class="modal" onclick="hideModal(event)"> 
     <div class="modal-content bg-warning" onclick="event.stopPropagation()">
         <span class="close" onclick="hideModal()">&times;</span>
-        <div class="modal-body">
-            <img id="modal-image" class="modal-image" alt="Personnel Image">
-            <h5 id="modal-name"></h5>
-            <p id="modal-position"></p>
-            <p id="modal-location"></p>
-            <p id="modal-contact"></p>
+        <div class="modal-body text-center">
+            <img 
+                id="modal-image" 
+                src="{{ personnel.image.url|default:'/media/defaultpic.jpg' }}" 
+                alt="Personnel Image" 
+                class="img-fluid rounded-circle" 
+                style="width: 150px; height: 150px; object-fit: cover;">
+            <h5 id="modal-name">{{ selected_personnel.name }}</h5>
+            <p id="modal-position">{{ selected_personnel.position }}</p>
+            <p id="modal-location">{{ selected_personnel.location }}</p>
+            <p id="modal-contact">{{ selected_personnel.contact }}</p>
         </div>
     </div>
 </div>
 
+
 <div id="no-results-container">
     <div id="no-results-alert" style="display:none; text-align: center;">
-        <p id="no-results-alert" style="display:none;">Sorry, no personnel found. <a href="#" id="go-back-link" style="text-decoration: underline; display:none;">Go back</a></p>
+        <p id="no-results-alert" style="display:none; margin-top: 25px;">Sorry, no personnel found. <a href="#" id="go-back-link" style="text-decoration: underline; display:none;">Go back</a></p>
     </div>
 </div>
 

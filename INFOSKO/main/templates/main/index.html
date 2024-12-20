@@ -5,17 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Infosko</title>
     {% load static %}
-    <!--Links-->
-    <link href="{% static 'css/infosko.css' %}" rel="stylesheet">
+    <!-- jQuery UI CSS -->
     <link rel="stylesheet" href="{% static 'css/jquery-ui.css' %}">
-    <link rel="icon" href="{% static '/images/favicon.ico' %}" type="image/x-icon">
-    <!--bootstrap and js dependencies-->
+    <!-- Bootstrap CSS -->
     <link href="{% static 'css/bootstrap.css' %}" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="{% static 'css/infosko.css' %}" rel="stylesheet">
+    <!-- Favicon -->
+    <link rel="icon" href="{% static 'images/favicon.ico' %}" type="image/x-icon">
+    
+    <!-- JS Dependencies -->
     <script src="{% static 'js/jquery.min.js' %}"></script>
     <script src="{% static 'js/jquery-ui.min.js' %}"></script>
     <script src="{% static 'js/popper.min.js' %}"></script>
-    <script src="{% static 'js/bootstrap.min.js' %}"></script>
-    
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>    
 </head>
 
 <body style="background-color: #f5f5f5;">
@@ -29,22 +32,25 @@
     <!--MAIN CONTENT-->
     <div class="container-custom mt-5 ml-5 mr-5 pl-3">
         <h1>Welcome to PUP College of Engineering</h1>
-        <p class="lead">Infosko provides navigation to your desired floors, rooms, offices, and even to respected professors and officers. You can also check the occupancy status of rooms in real-time and request the use of a vacant room from the laboratory head. There are three options below that you can choose to explore and use, feel free to use!</p>
+        <p class="lead">INFOSKO offers an innovative way to check classroom availability across the campus using camera systems—eliminating the need to physically visit and inspect each room. With INFOSKO, you can view real-time schedules for every room and even submit requests to use vacant classrooms directly to the laboratory head. 
+            The platform also includes a dynamic faculty directory with a convenient search feature and modal for quick access. Additionally, it features a simple floor plan viewer to help you navigate the campus effortlessly. Feel free to explore and make the most of its features!
+        </p>
         
         <div class="button-container text-center mt-5 mb-4">
             <div class="button-wrapper">
-                <a href="{% url 'navigation' %}" class="btn btn-custom btn-lg bg-warning">FLOOR - PLAN</a>
-                <p class="btn-description lead">NAVIGATE THE CAMPUS EASILY WITH THIS INFORMATION SYSTEM</p>
+                <a href="{% url 'classroom' %}" class="btn btn-custom btn-lg bg-warning">CLASSROOM MANAGEMENT</a>
+                <p class="btn-description lead">CHECK THE CLASSROOM AVAILABILITY HERE, MONITORED BY A CAMERA</p>
             </div>
 
             <div class="button-wrapper">
-                <a href="{% url 'faculties' %}" class="btn btn-custom btn-lg bg-warning">CPE DEPARTMENT FACULTIES</a>
-                <p class="btn-description lead">EXPLORE CPE DEPARTMENT RESPECTABLE PROFESSORS</p>
+                <a href="{% url 'faculties' %}" class="btn btn-custom btn-lg bg-warning">CPE DEPARTMENT FACULTY MEMBERS</a>
+                <p class="btn-description lead">RECOGNIZE CPE FACULTY MEMBERS AND KNOW THERE COMMON LOCATIONS INSIDE THE CAMPUS FOR EDUCATIONAL PURPOSES.
+                </p>
             </div>
 
             <div class="button-wrapper">
-                <a href="{% url 'classroom' %}" class="btn btn-custom btn-lg bg-warning">CLASSROOM</a>
-                <p class="btn-description lead">CHECK CLASSROOMS OCCUPANCY EASILY</p>
+                <a href="{% url 'navigation' %}" class="btn btn-custom btn-lg bg-warning">FLOOR - PLANS</a>
+                <p class="btn-description lead">NAVIGATE THE CAMPUS EASILY WITH FLOORPLANS</p>
             </div>
   
         </div>
