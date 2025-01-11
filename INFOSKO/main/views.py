@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import JsonResponse
-from django.utils import timezone
-from django.db.models import Case, When, Value, CharField
-from django.core.paginator import Paginator
+from django.utils.timezone import localtime
+from django.db.models import Case, When, Value, CharField, Q, IntegerField
 from django.core.files.storage import default_storage
 from rest_framework import viewsets
+from rest_framework.generics import ListAPIView
+from .pagination import PersonnelPagination
 import csv
 from .models import Personnel, Item, Room, RoomSchedule, Logs
 from .serializers import PersonnelSerializer, ItemSerializer
@@ -20,23 +21,92 @@ class PersonnelViewSet(viewsets.ModelViewSet):
     queryset = Personnel.objects.all()
     serializer_class = PersonnelSerializer
 
-# HTML Views
-def index(request):
-    return render(request, 'main/index.html')
+class PersonnelListView(ListAPIView):
+    queryset = Personnel.objects.all()
+    serializer_class = PersonnelSerializer
+    pagination_class = PersonnelPagination
 
-def navigation(request):
-    return render(request, 'main/navigation.html')
+logger = logging.getLogger(__name__)
 
-def secfloor(request):
-    return render(request, 'main/secfloor.html')
-
-def thrdfloor(request):
-    return render(request, 'main/thrdfloor.html')
-
-def fourthfloor(request):
-    return render(request, 'main/fourthfloor.html')
+# Classroom management view
+def classroom(request):
+    current_day = localtime().strftime('%A')
+    return render(request, 'main/classroom.html', {'current_day': current_day})
 
 
+# API to get all rooms and their statuses
+def get_rooms(request):
+    try:
+        rooms = Room.objects.all()
+        room_data = [
+            {
+                'id': room.id,
+                'name': room.number,  # Ensure 'name' is consistent with the frontend
+            }
+            for room in rooms
+        ]
+        return JsonResponse({'rooms': room_data}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': f'Error fetching rooms: {str(e)}'}, status=500)
+
+
+# API to get room schedule
+def room_schedule_api(request, room_id):
+    try:
+        logger.info(f"Fetching schedule for room ID: {room_id}")
+        room = get_object_or_404(Room, id=room_id)
+        current_date = localtime().date()
+        logger.info(f"Current date: {current_date}")
+
+        # Fetch schedules for today
+        schedules = RoomSchedule.objects.filter(room=room, date=current_date).order_by('start_time')
+        logger.info(f"Schedules fetched: {schedules}")
+
+        regular_schedules = []
+        temporary_schedules = []
+
+        for schedule in schedules:
+            schedule_data = {
+                'class_name': schedule.subject_name,
+                'section': schedule.section_name,
+                'professor': schedule.professor_name,
+                'start_time': schedule.start_time.strftime('%I:%M %p'),
+                'end_time': schedule.end_time.strftime('%I:%M %p'),
+            }
+            if schedule.schedule_type == 'regular':
+                regular_schedules.append(schedule_data)
+            elif schedule.schedule_type == 'temporary':
+                temporary_schedules.append(schedule_data)
+
+        response_data = {
+            'room_name': room.number,
+            'regularSchedules': regular_schedules,
+            'temporarySchedules': temporary_schedules,
+        }
+
+        return JsonResponse(response_data, status=200)
+    except Exception as e:
+        logger.error(f"Error fetching room schedule: {str(e)}")
+        return JsonResponse({'error': f"Error fetching schedule: {str(e)}"}, status=500)
+
+
+# Function to clean up expired temporary schedules
+def cleanup_expired_temporary_schedules():
+    try:
+        now_time = localtime().time()
+        now_date = localtime().date()
+        expired_schedules = RoomSchedule.objects.filter(
+            schedule_type="temporary",
+            end_time__lt=now_time,
+            date__lt=now_date
+        )
+        deleted_count, _ = expired_schedules.delete()
+
+        logger.info(f"Cleaned up {deleted_count} expired temporary schedules.")
+    except Exception as e:
+        logger.exception(f"Error while cleaning up expired temporary schedules: {e}")
+
+#personnel/faculties
 def faculties(request):
     """Fetch all personnel and annotate display_position dynamically."""
     personnel = Personnel.objects.annotate(
@@ -50,33 +120,49 @@ def faculties(request):
     }
     return render(request, 'main/faculties.html', context)
 
-
 def personnel_list(request):
-    """Fetch personnel based on search query and paginate the results."""
-    search_query = request.GET.get('search', '')
-    personnel = Personnel.objects.filter(name__icontains=search_query).annotate(
-        display_position=Case(
-            When(employment_type=Personnel.KEY_PERSON, then='department_position'),
-            default=Value('', output_field=CharField())
-        )
-    )
-    paginator = Paginator(personnel, 10)  # Paginate 10 items per page
-    page_number = request.GET.get('page', 1)
-    personnel_page = paginator.get_page(page_number)
+    search_query = request.GET.get('search', '').strip()
+    offset = int(request.GET.get('offset', 0))
+    limit = int(request.GET.get('limit', 20))
 
+    print(f"Offset: {offset}, Limit: {limit}, Search Query: '{search_query}'")  # Debugging info
+
+    # Filter personnel
+    personnel = Personnel.objects.filter(
+        Q(name__icontains=search_query) | Q(department_position__icontains=search_query)
+    ).annotate(
+        category_order=Case(
+            When(employment_type='key-person', then=Value(0)),
+            When(employment_type='full-time', then=Value(1)),
+            When(employment_type='part-time', then=Value(2)),
+            default=Value(3),
+            output_field=IntegerField()
+        )
+    ).order_by('category_order', 'name')
+
+    total_personnel = personnel.count()
+    print(f"Total Personnel Count: {total_personnel}")  # Debug total count
+
+    # Paginate personnel
+    paginated_personnel = personnel[offset:offset + limit]
+    print(f"Paginated Personnel Count: {len(paginated_personnel)}")  # Debug paginated count
+
+    # Prepare JSON response
     personnel_data = [
         {
             'id': person.id,
             'name': person.name,
-            'contact': person.contact,
-            'location': person.location,
-            'image': person.image.url if person.image else 'https://via.placeholder.com/150',
+            'department_position': person.department_position,
             'employment_type': person.employment_type,
-            'department_position': person.display_position,
+            'image': person.image.url if person.image else '/media/defaultpic.jpg',
         }
-        for person in personnel_page
+        for person in paginated_personnel
     ]
-    return JsonResponse(personnel_data, safe=False)
+
+    return JsonResponse({
+        'total_count': total_personnel,
+        'personnel_data': personnel_data
+    }, safe=False)
 
 
 def personnel_suggestions(request):
@@ -102,16 +188,21 @@ def personnel_suggestions(request):
     return JsonResponse({'message': 'No search term provided', 'data': []}, safe=False)
 
 
-# Personnel Management Views
 def add_personnel(request):
     """Add new personnel and log the action."""
-    if request.method == 'POST':
+    try:
+        # Extract fields from POST request
         name = request.POST.get('name')
         contact = request.POST.get('contact')
         location = request.POST.get('location')
         employment_type = request.POST.get('employment_type')
         department_position = request.POST.get('department_position')
 
+        # Validate required fields
+        if not name or not employment_type or not department_position:
+            return JsonResponse({'error': 'Missing required fields'}, status=400)
+
+        # Create new personnel
         new_personnel = Personnel.objects.create(
             name=name,
             contact=contact,
@@ -119,20 +210,37 @@ def add_personnel(request):
             employment_type=employment_type,
             department_position=department_position
         )
+
+        # Log the action
         log_personnel_action('ADD', new_personnel.id, name)
-        return JsonResponse({'message': 'Personnel added successfully', 'id': new_personnel.id})
 
-    return JsonResponse({'error': 'Invalid request method'}, status=400)
-
+        return JsonResponse({
+            'message': 'Personnel added successfully',
+            'id': new_personnel.id
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 def delete_personnel(request, personnel_id):
     """Delete personnel and log the action."""
-    personnel = get_object_or_404(Personnel, id=personnel_id)
-    personnel_name = personnel.name
-    personnel.delete()
-    log_personnel_action('DELETE', personnel_id, personnel_name)
-    return JsonResponse({'message': f'Personnel {personnel_name} deleted successfully'})
+    try:
+        # Retrieve personnel instance
+        personnel = get_object_or_404(Personnel, id=personnel_id)
 
+        # Save personnel name before deletion
+        personnel_name = personnel.name
+
+        # Log the action before deleting the object
+        log_personnel_action('DELETE', personnel_id, personnel_name)
+
+        # Delete personnel record
+        personnel.delete()
+
+        return JsonResponse({
+            'message': f'Personnel {personnel_name} deleted successfully'
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 def view_logs(request):
     """View logs of personnel actions."""
@@ -251,7 +359,7 @@ def confirm_csv_upload(request):
                             'location': row.get('location', 'Default Location'),
                             'employment_type': row.get('employment_type', 'Unknown'),
                             'department_position': row.get('department_position', 'Unspecified'),
-                            'image': row.get('image', '')
+                            'image': row.get('image') or None  # Use None to trigger default value
                         }
                     )
                 messages.success(request, "All personnel data imported successfully!")
@@ -274,42 +382,18 @@ def confirm_csv_upload(request):
         'warnings': warnings
     })
 
+## HTML Views and Floorplan/Navigation
+def index(request):
+    return render(request, 'main/index.html')
 
-# Classroom Functions
-def classroom(request):
-    rooms = Room.objects.all()
-    current_day = timezone.localtime().strftime('%A')
-    schedules = RoomSchedule.objects.filter(day_of_week=current_day)
-    return render(request, 'main/classroom.html', {'rooms': rooms, 'current_day': current_day, 'schedules': schedules})
+def navigation(request):
+    return render(request, 'main/navigation.html')
 
-def get_rooms(request):
-    rooms = Room.objects.all()
-    room_data = [
-        {
-            'id': room.id,
-            'number': room.number,
-            'isOccupied': room.occupied,
-            'timestamp': timezone.now().timestamp()
-        } for room in rooms
-    ]
-    return JsonResponse({'rooms': room_data})
+def secfloor(request):
+    return render(request, 'main/secfloor.html')
 
-def room_modal(request, roomid):
-    room = get_object_or_404(Room, id=roomid)
-    current_day = timezone.localtime().strftime('%A')
-    schedule = RoomSchedule.objects.filter(room_id=roomid, day_of_week=current_day)
-    current_time = timezone.localtime().time()
-    is_occupied = any(sch.time_start <= current_time <= sch.time_end for sch in schedule)
-    room.occupied = is_occupied
-    room.save()
-    return render(request, 'main/room_modal.html', {'room': room, 'schedule': schedule})
+def thrdfloor(request):
+    return render(request, 'main/thrdfloor.html')
 
-def check_occupancy(request, roomid):
-    room = get_object_or_404(Room, id=roomid)
-    current_day = timezone.localtime().strftime('%A')
-    current_time = timezone.localtime().time()
-    schedule = RoomSchedule.objects.filter(room_id=room, day_of_week=current_day)
-    is_occupied = any(sch.time_start <= current_time <= sch.time_end for sch in schedule)
-    room.occupied = is_occupied
-    room.save()
-    return JsonResponse({'id': room.id, 'isOccupied': room.occupied})
+def fourthfloor(request):
+    return render(request, 'main/fourthfloor.html')

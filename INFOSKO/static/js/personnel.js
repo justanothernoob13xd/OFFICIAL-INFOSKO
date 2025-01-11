@@ -1,8 +1,14 @@
-// Track if modal has been closed to avoid accidental re-filters
+// Global Variables
 let modalJustClosed = false;
-let noResultsAlertVisible = false; 
+let noResultsAlertVisible = false;
+let currentPage = 1;
+let isLoading = false;
+let displayedPersonnelIds = new Set();
+const pageSize = 50;
+let lastSearchQuery = '';
+let lastUpdateTime = null;
 
-// Debounce function for limiting search requests
+// Debounce Helper
 function debounce(func, delay) {
     let timer;
     return function (...args) {
@@ -11,10 +17,7 @@ function debounce(func, delay) {
     };
 }
 
-// Track the last search query to avoid redundant searches
-let lastSearchQuery = '';
-
-// Enhanced text normalization to handle variations in spaces, punctuation, and casing
+// Text Normalization
 function normalizeText(text) {
     return text.trim().toLowerCase().replace(/\s+/g, '').replace(/[.\-]/g, '');
 }
@@ -29,57 +32,110 @@ function hideModal() {
     });
 }
 
-// Function to clear personnel display layout
+// Function to clear personnel display layout (unchanged)
 function clearPersonnelDisplay() {
-    clearHeaders();
     $('#key-persons-container, #full-time-container, #part-time-container').hide();
+    $('#key-persons-container, #full-time-container, #part-time-container').empty(); // Clear content
+    $('#full-time-header, #part-time-header, #key-persons-header').hide(); // Hide headers
     noResultsAlertVisible = true; // Track visibility state for "No Results"
+    displayedPersonnelIds.clear(); // Clear displayed personnel IDs
+}
+
+// Function to display "No Results" (unchanged)
+function displayNoResults() {
+    console.log('Display No Results Triggered'); // Debugging log
+    $('#no-results-alert').html('Sorry, no personnel found. <a href="#" id="go-back-link">Go Back</a>').fadeIn(500);
+    $('#key-persons-container, #full-time-container, #part-time-container').hide(); // Hide other containers
+    noResultsAlertVisible = true; // Track visibility state
 }
 
 // Update the "Go Back" link functionality
-$(document).on('click', '#go-back-link', function (event) {
-    event.preventDefault();
-    lastSearchQuery = '';
-    noResultsAlertVisible = false; // Reset visibility state
-    fetchPersonnel(); // Reset display to show all personnel
-    $('#no-results-alert').hide();
-    $('#go-back-link').hide();
-    $('#search-input').removeClass('is-invalid');
-    $('#search-input').val(''); // Clear search input
-    $('#key-persons-container, #full-time-container, #part-time-container').show(); // Restore containers
+$(document).on('click', '#go-back-link', async function (event) {
+    event.preventDefault(); // Prevent default link behavior
+
+    console.log('Go Back Clicked - Resetting State');
+
+    // Hide "No Results" alert
+    noResultsAlertVisible = false; // Reset the alert visibility tracker
+    $('#no-results-alert').fadeOut(300); // Fade out the "No Results" alert
+
+    // Reset Search Input
+    $('#search-input').removeClass('is-invalid').val(''); // Clear input and validation
+
+    // Show personnel containers and reset UI
+    $('#key-persons-container, #full-time-container, #part-time-container')
+        .empty() // Clear any existing content
+        .show(); // Make sure they are visible
+
+    // Clear State
+    clearHeaders(); // Clear any headers
+    displayedPersonnelIds.clear(); // Reset the set of displayed personnel IDs
+
+    // Fetch and display all personnel (handle pagination manually)
+    try {
+        let allPersonnel = []; // Array to store all personnel data
+        let currentPage = 1; // Start from the first page
+        const pageSize = 50; // Adjust this if your API uses a different page size
+
+        while (true) {
+            console.log(`Fetching page ${currentPage}...`);
+            const response = await fetch(`/api/personnel?page=${currentPage}&size=${pageSize}`);
+            if (!response.ok) {
+                console.error(`Failed to fetch personnel. Status: ${response.status}`);
+                break;
+            }
+
+            const rawData = await response.json();
+            const personnelData = rawData.results || rawData.personnel_data || [];
+
+            // Add fetched personnel to the array
+            allPersonnel = allPersonnel.concat(personnelData);
+
+            console.log(`Fetched Page ${currentPage}:`, personnelData.length, 'records');
+
+            // Break if no more data to fetch
+            if (personnelData.length < pageSize) break;
+
+            // Increment page number for the next fetch
+            currentPage++;
+        }
+
+        console.log(`Total Personnel Fetched: ${allPersonnel.length}`);
+        
+        // Update the layout with all personnel data
+        updatePersonnelLayout(allPersonnel, true); // Clear existing layout and display all personnel
+    } catch (error) {
+        console.error('Error fetching all personnel:', error);
+    }
 });
 
-// Improved fetchPersonnel function to handle modal restoration
+// Updated fetchPersonnel with additional logs
 function fetchPersonnel(searchQuery = '', triggerModal = false) {
-    const normalizedQuery = normalizeText(searchQuery);
-
-    if (!triggerModal) {
-        clearHeaders();
-    }
+    console.log('Fetching personnel...');
+    const url = searchQuery
+        ? `/api/personnel-list/?search=${encodeURIComponent(searchQuery)}&page=${currentPage}&size=${pageSize}`
+        : `/api/personnel-list/?page=${currentPage}&size=${pageSize}`;
 
     $.ajax({
-        url: '/api/personnel-list/',
-        data: { search: searchQuery },
+        url: url,
         success: function (data) {
-            const exactMatch = data.find(person => normalizeText(person.name) === normalizedQuery);
+            const personnelData = data.personnel_data || [];
+            console.log('API Response:', data);
 
-            if (triggerModal && exactMatch) {
-                openPersonnelModal(exactMatch);
-            } else if (triggerModal || data.length === 0) {
-                noResultsAlertVisible = true;
+            if (personnelData.length === 0) {
+                console.log('No personnel data found, triggering displayNoResults...');
                 clearPersonnelDisplay();
-                $('#no-results-alert')
-                    .html('Sorry, no personnel found. <a href="#" id="go-back-link" style="text-decoration: underline;">Go back</a>')
-                    .fadeIn(500);
-            } else {
-                noResultsAlertVisible = false;
-                $('#no-results-alert').fadeOut(500); // Ensure it fades out properly
-                updatePersonnelLayout(data);
+                displayNoResults();
+                return;
             }
+
+            console.log('Personnel data exists, updating layout...');
+            updatePersonnelLayout(personnelData); // Re-render layout dynamically
         },
         error: function (error) {
-            console.error('Error:', error);
-            $('#no-results-alert').html('Something went wrong. Please try again.').fadeIn(500);        
+            console.error('Error Fetching Personnel:', error);
+            clearPersonnelDisplay();
+            displayNoResults();
         }
     });
 }
@@ -176,14 +232,12 @@ function openPersonnelModal(person) {
     $('#personnelModal').fadeIn(500);
 }
 
-// Function to hide the modal
-function hideModal(event) {
-    if (event && $(event.target).closest('.modal-content').length) return; // Avoid closing if clicking inside content
-
+// Fetch personnel with exact match handling
+function hideModal() {
     $('#personnelModal').fadeOut(500, function () {
-        // Show "No Results" if it was visible previously
-        if (noResultsAlertVisible) {
-            $('#no-results-alert').fadeIn(500);
+        // Restore the "no results" message only if it was previously visible
+        if ($('#no-results-alert').is(':visible')) {
+            $('#no-results-alert').fadeIn(500); // Ensure the message is displayed consistently
         }
     });
 }
@@ -197,41 +251,61 @@ function clearHeaders() {
     $('#full-time-header, #part-time-header, #key-persons-header').hide();
 }
 
-// "Go Back" link to reset personnel display and search input
-$(document).on('click', '#go-back-link', function (event) {
-    event.preventDefault();
-    if (noResultsAlertVisible) {
-        noResultsAlertVisible = false; // Reset alert visibility
-        fetchPersonnel(); // Fetch and reset display
-        $('#no-results-alert').fadeOut(500); // Smooth fade-out
-        $('#go-back-link').fadeOut(500);
-        $('#search-input').removeClass('is-invalid').val(''); // Clear search input
-        $('#key-persons-container, #full-time-container, #part-time-container').fadeIn(500); // Restore containers
+
+// Update personnel layout with dynamic removal and addition of personnel
+function updatePersonnelLayout(data, clearExisting = true) {
+    if (clearExisting) {
+        console.log('Clearing existing personnel layout...');
+        $('#key-persons-container, #full-time-container, #part-time-container').empty().show();
+        displayedPersonnelIds.clear(); // Clear tracked IDs for new data
     }
-});
 
-// Function to update the personnel layout when multiple results are found
-function updatePersonnelLayout(data) {
-    // Clear all containers
-    const keyPersonsContainer = $('#key-persons-container').empty().show();
-    const fullTimeContainer = $('#full-time-container').empty().show();
-    const partTimeContainer = $('#part-time-container').empty().show();
+    // Check if data is empty
+    if (!data || data.length === 0) {
+        displayNoResults(); // Show "No Results" alert and clear layout
+        return;
+    }
 
-    // Filter data into categories
-    const keyPersons = data.filter(person => person.employment_type === 'key-person');
-    const fullTimePersonnel = data.filter(person => person.employment_type === 'full-time');
-    const partTimePersonnel = data.filter(person => person.employment_type === 'part-time');
+    const currentPersonnelIds = new Set(data.map(person => String(person.id))); // IDs from server
+    const removedPersonnelIds = [...displayedPersonnelIds].filter(id => !currentPersonnelIds.has(id));
 
-    // Handle visibility of headers based on data
+    // Remove personnel not in the latest response
+    removedPersonnelIds.forEach(id => {
+        $(`[data-personnel-id="${id}"]`).remove();
+        displayedPersonnelIds.delete(id); // Remove from tracking
+    });
+
+    const uniquePersonnel = data.filter(person => {
+        const isDuplicate = displayedPersonnelIds.has(String(person.id));
+        if (!isDuplicate) displayedPersonnelIds.add(String(person.id)); // Add to set
+        return !isDuplicate;
+    });
+
+    // Hide "No Results" alert if new personnel are added
+    if (uniquePersonnel.length > 0) {
+        $('#no-results-alert').hide();
+    }
+
+    if (uniquePersonnel.length === 0 && displayedPersonnelIds.size === 0) {
+        displayNoResults(); // If no personnel are left after update
+        return;
+    }
+
+    console.log(`Adding ${uniquePersonnel.length} unique personnel to the layout...`);
+
+    const keyPersons = uniquePersonnel.filter(person => person.employment_type.toLowerCase() === 'key-person');
+    const fullTimePersonnel = uniquePersonnel.filter(person => person.employment_type.toLowerCase() === 'full-time');
+    const partTimePersonnel = uniquePersonnel.filter(person => person.employment_type.toLowerCase() === 'part-time');
+
     $('#full-time-header').toggle(fullTimePersonnel.length > 0);
     $('#part-time-header').toggle(partTimePersonnel.length > 0);
     $('#key-persons-header').toggle(keyPersons.length > 0);
 
-    // Populate containers with filtered data
-    createPersonnelLayout(keyPersons, keyPersonsContainer, 'key-person');
-    createPersonnelLayout(fullTimePersonnel, fullTimeContainer);
-    createPersonnelLayout(partTimePersonnel, partTimeContainer);
+    createPersonnelLayout(keyPersons, $('#key-persons-container'), 'key-person');
+    createPersonnelLayout(fullTimePersonnel, $('#full-time-container'));
+    createPersonnelLayout(partTimePersonnel, $('#part-time-container'));
 }
+
 
 // Function to create the triangular hierarchy layout for personnel
 function createPersonnelLayout(personnelData, container, type = '') {
@@ -242,7 +316,7 @@ function createPersonnelLayout(personnelData, container, type = '') {
     personnelData.forEach((person, index) => {
         const personCard = `
             <div class="person-image-container" onclick="showModal(${person.id})">
-                <img src="${person.image || 'https://via.placeholder.com/150'}" class="person-image" alt="${person.name}">
+                <img src="${person.image || '/media/defaultpic.jpg'}" class="person-image" alt="${person.name}">
                 <h5 class="person-name">${person.name}</h5>
                 ${type === 'key-person' && person.department_position ? `<p class="person-position">${person.department_position}</p>` : ''}
             </div>
@@ -284,46 +358,50 @@ function showModal(id) {
     });
 }
 
-// Auto-refresh personnel layout every 5 minutes
-setInterval(() => {
-    if (!modalJustClosed && !noResultsAlertVisible) {
-        fetchPersonnel(lastSearchQuery || '');
-    }
-}, 5000); // Adjust interval as needed
-
-// Initialize personnel display on page load
-$(document).ready(function() {
-    fetchPersonnel(); // Initial call to display all personnel
+// Initialize on Page Load
+$(document).ready(function () {
+    fetchPersonnel();
     $('#personnelModal').hide();
+    $('#no-results-alert').hide(); 
+
+// Simplified Polling Integration
+setInterval(() => fetchPersonnel('', false), 10000); // Poll every 10 seconds
+
+// Fetch personnel with dynamic deletion and empty state fix
+async function fetchPersonnel(searchQuery = '', triggerModal = false) {
+    try {
+        console.log('Fetching personnel...');
+
+        // API URL construction
+        const url = `/api/personnel?search=${encodeURIComponent(searchQuery)}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            console.error(`Failed to fetch personnel. Status: ${response.status}`);
+            clearPersonnelDisplay();
+            displayNoResults();
+            return;
+        }
+
+        const rawData = await response.json();
+        console.log('API Response:', rawData);
+
+        const data = rawData.results || [];
+        if (data.length === 0) {
+            clearPersonnelDisplay();
+            displayNoResults();
+            return;
+        }
+
+        updatePersonnelLayout(data);
+    } catch (error) {
+        console.error('Error fetching personnel:', error);
+        clearPersonnelDisplay();
+        displayNoResults();
+    }
+}
 });
 
 
-// Idle timer function to redirect to index after 1 minute of inactivity
-let idleTimer, countdownTimer, countdown = 60; // 60 seconds for 1 minute
 
-function startIdleTimer() {
-    countdown = 60; // Reset countdown to 1 minute
-    console.log("Idle timer started. Redirecting in 1 minute...");
-    countdownTimer = setInterval(function () {
-        countdown--;
-        console.log(`Redirecting in ${countdown} seconds...`); // Log countdown in console
-        if (countdown <= 0) {
-            clearInterval(countdownTimer);
-            console.log("Redirecting now...");
-            window.location.href = '/'; // Redirect to the index page
-        }
-    }, 1000); // 1-second intervals
-}
-
-function resetIdleTimer() {
-    clearTimeout(idleTimer);
-    clearInterval(countdownTimer);
-    console.log("User activity detected. Idle timer reset.");
-    idleTimer = setTimeout(startIdleTimer, 60000); // Restart idle timer for 1 minute
-}
-
-// Reset timer on scroll or click
-$(document).on('scroll click', resetIdleTimer);
-
-// Start idle timer on page load
-startIdleTimer();
+    

@@ -1,9 +1,9 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone  
-
 from .models import Personnel, Logs
 
+#Personnel signals
 @receiver(post_save, sender=Personnel)
 def log_personnel_save(sender, instance, created, **kwargs):
     if created:

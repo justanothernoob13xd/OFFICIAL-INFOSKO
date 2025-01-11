@@ -1,7 +1,87 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from django.utils.timezone import now
+from django.utils.timezone import now, localtime
 from datetime import timedelta
+from django.core.management.base import BaseCommand
+
+# Model for Classroom
+class Room(models.Model):
+    number = models.CharField(max_length=100, unique= True)
+    occupied = models.BooleanField(default=False)
+    
+    def save(self, *args, **kwargs):
+        # Check if "Room" is already part of the number
+        if not self.number.startswith("Room "):
+            self.number = f"Room {self.number}"
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        # Custom validation to handle duplicates
+        if Room.objects.filter(number=self.number).exists():
+            raise ValidationError(f"The room '{self.number}' already exists.")
+
+    def __str__(self):
+        return self.number
+    
+# RoomSchedule Model
+class RoomSchedule(models.Model):
+    SCHEDULE_TYPES = [
+        ('regular', 'Regular'),
+        ('temporary', 'Temporary'),
+    ]
+
+    room = models.ForeignKey(Room, on_delete=models.CASCADE)
+    schedule_type = models.CharField(
+        max_length=10,
+        choices=SCHEDULE_TYPES,
+        default='regular',
+    )
+    date = models.DateField()
+    day_of_week = models.CharField(
+        max_length=10,
+        choices=[
+            ('Monday', 'Monday'),
+            ('Tuesday', 'Tuesday'),
+            ('Wednesday', 'Wednesday'),
+            ('Thursday', 'Thursday'),
+            ('Friday', 'Friday'),
+            ('Saturday', 'Saturday'),
+            ('Sunday', 'Sunday'),
+        ],
+    )
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    professor_name = models.CharField(max_length=100, blank=True, null=True)
+    subject_name = models.CharField(max_length=100, blank=True, null=True)
+    section_name = models.CharField(max_length=100, blank=True, null=True)
+
+    def clean(self):
+        actual_day = self.date.strftime('%A')
+        if actual_day != self.day_of_week:
+            raise ValidationError(
+                f"The selected date ({self.date}) does not match the selected day ({self.day_of_week})."
+            )
+
+    def is_expired(self):
+        now = localtime()
+        return self.schedule_type == 'temporary' and (
+            now.date() > self.date or (now.date() == self.date and now.time() > self.end_time)
+        )
+
+    def __str__(self):
+        return f"{self.schedule_type.capitalize()} Schedule for Room {self.room.number} on {self.date}"
+class Command(BaseCommand):
+    help = "Clean up expired temporary schedules"
+
+    def handle(self, *args, **kwargs):
+        now = localtime()
+        expired_schedules = RoomSchedule.objects.filter(
+            schedule_type='temporary',
+            date__lt=now.date()
+        )
+        deleted_count, _ = expired_schedules.delete()
+        self.stdout.write(f"Deleted {deleted_count} expired temporary schedules.")
+
 
 # Model for Faculties
 class Personnel(models.Model):
@@ -40,54 +120,12 @@ class Personnel(models.Model):
     def __str__(self):
         return self.name
     
-class TemporaryPersonnel(models.Model):
-    name = models.CharField(max_length=255)
-    contact = models.CharField(max_length=255)
-    location = models.CharField(max_length=255)
-    employment_type = models.CharField(max_length=255)
-    department_position = models.CharField(max_length=255)
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-
-
 class Item(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
 
     def __str__(self):
         return self.name
-
-
-# Model for Classroom
-class Room(models.Model):
-    number = models.CharField(max_length=10)
-    occupied = models.BooleanField(default=False)
-
-    def __str__(self):
-        return f'Room {self.number}'
-
-
-# Model for Room Schedule
-class RoomSchedule(models.Model):
-    room_id = models.ForeignKey(Room, on_delete=models.CASCADE)
-    section = models.CharField(max_length=50)
-    date = models.DateField()  # Add date field
-    time_start = models.TimeField()
-    time_end = models.TimeField()
-    class_name = models.CharField(max_length=100)
-    supervisor = models.CharField(max_length=100)
-    day_of_week = models.CharField(max_length=9, choices=[
-        ('Sunday', 'Sunday'),
-        ('Monday', 'Monday'),
-        ('Tuesday', 'Tuesday'),
-        ('Wednesday', 'Wednesday'),
-        ('Thursday', 'Thursday'),
-        ('Friday', 'Friday'),
-        ('Saturday', 'Saturday'),
-    ], default='Sunday')
-
-    def __str__(self):
-        return f'{self.room_id}'
-
 
 # Model for Automated Logs
 class Logs(models.Model):
@@ -96,7 +134,7 @@ class Logs(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name_plural = "Logs"
+        verbose_name_plural = "Personnel logs"
 
 @staticmethod
 def delete_old_logs(days=30):

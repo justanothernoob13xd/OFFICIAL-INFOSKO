@@ -94,11 +94,15 @@
 
 
 <div id="no-results-container">
-    <div id="no-results-alert" style="display:none; text-align: center;">
-        <p id="no-results-alert" style="display:none; margin-top: 25px;">Sorry, no personnel found. <a href="#" id="go-back-link" style="text-decoration: underline; display:none;">Go back</a></p>
+    <div id="no-results-alert" style="display:none; text-align: center; margin-top: 20rem;">
+        <p style="margin-top: 25px;">
+            Sorry, no personnel found. 
+            <a href="#" id="go-back-link" style="text-decoration: underline;">Go back</a>
+        </p>
     </div>
 </div>
 
-
+<link href="{% static 'css/personnel.css' %}" rel="stylesheet">
 <script src="{% static 'js/personnel.js' %}"></script>
+<script src="{% static 'js/timer.js' %}"></script>
 {% endblock %}

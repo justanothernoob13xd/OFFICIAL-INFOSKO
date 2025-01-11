@@ -37,7 +37,13 @@
             <td>{{ row.location }}</td>
             <td>{{ row.employment_type }}</td>
             <td>{{ row.department_position }}</td>
-            <td>{{ row.image|default:"No Image Provided" }}</td>
+            <td>
+                {% if row.image %}
+                    <img src="{{ row.image }}" alt="Personnel Image" style="max-height: 50px; max-width: 50px;">
+                {% else %}
+                    <img src="{{ MEDIA_URL }}defaultpic.jpg" alt="Default Image" style="max-height: 50px; max-width: 50px;">
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>

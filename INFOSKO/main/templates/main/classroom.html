@@ -4,176 +4,74 @@
 {% block title %}Classroom{% endblock %}
 
 {% block content %}
-<nav class="navbar navbar-expand-lg navbar-custom justify-content">
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-custom justify-content-between">
     <div class="back-button mb-3 mt-2">
         <a href="{% url 'index' %}" class="btn btn-warning btn-lg">Back</a>
     </div>
-    <a class="navbar-brand text-center ml-5">CLASSROOMS</a>
+    <div class="d-flex flex-grow-1 justify-content-between align-items-center">
+        <a class="navbar-brand ml-5" style="flex-shrink: 0;">CLASSROOMS</a>
+    </div>
 </nav>
 
-<div class="container-custom mt-5 ml-5 mr-5 pl-3">
-    <div class="container-lg d-flex justify-content mt-5 ml-0">
-        <div class="column mr-lg-5">
-            <h2>Dynamic Classroom Viewer</h2>
-            <p class="text-start">These are the occupied and unoccupied classrooms right now, might as well check the notifications for room request, below are the indication whether the room is occupied or unoccupied.</p>
-            <ul>
-                <li>Classroom is <span style="color: green; font-weight: 700;">GREEN</span> when Unoccupied.</li>
-                <li>Classroom is <span style="color: red; font-weight: 700;">RED</span> when Occupied.</li>
-            </ul>
-            <h3>Room Schedules for {{ current_day }}</h3>
-            <p id="currentDate" class="font-weight-bold"></p> <!-- Placeholder for current date -->
-            <div class="d-flex p-1" id="roomContainer" style="gap: 10px">
-                {% for classroom in rooms %}
-                <div id="room-{{ classroom.id }}" class="p-4 card rooms text-center font-weight-bold {% if classroom.isOccupied %}bg-danger{% else %}bg-success{% endif %}" style="width: 150px; height: 120px;" data-toggle="modal" data-target="#roomModal" data-id="{{ classroom.id }}">
-                    <p>Room No.</p>
-                    <p class="room-number">{{ classroom.number }}</p>    
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Main Content -->
+<div class="container mt-5">
+    <div class="card p-4 shadow-sm">
+        <h2 class="text-center">Dynamic Classroom Viewer</h2>
+        <p class="text-muted text-center">Click on a room to view more details about its schedule.</p>
+        <p class="text-muted text-center">
+            <strong>Legend:</strong>
+            <span class="text-danger fw-bold">Red</span> = Occupied,
+            <span class="text-success fw-bold">Green</span> = Unoccupied
+        </p>
 
-<!-- Modal Structure -->
-<div class="modal fade" id="roomModal" tabindex="-1" role="dialog" aria-labelledby="roomModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title text-dark" id="roomModalLabel">Room Details</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+        <!-- Room Buttons -->
+        <div id="rooms-container" class="row mt-4">
+            {% for room in rooms %}
+            <div class="col-md-4 mb-3">
+                <button 
+                    class="btn w-100 room-button btn-primary" 
+                    data-room-id="{{ room.id }}" 
+                    data-room-name="{{ room.name }}">
+                    {{ room.name }}
                 </button>
             </div>
+            {% empty %}
+            <p class="text-center text-muted w-100">NO CLASSROOMS AVAILABLE</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<!-- Room Modal -->
+<div class="modal" style="margin-top: 12rem;" id="roomModal" tabindex="-1" aria-labelledby="roomModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="roomModalLabel">Schedule for <span id="roomName"></span></h5>
+            </div>
             <div class="modal-body">
-                <!-- Room details will be loaded here -->
+                <!-- Regular Schedule Section -->
+                <h5>Regular Schedule</h5>
+                <div id="regularScheduleContainer" class="mb-3">
+                    <!-- Regular schedule items will be dynamically added here -->
+                </div>
+
+                <!-- Temporary Schedule Section -->
+                <h5>Temporary Schedule</h5>
+                <div id="temporaryScheduleContainer" class="mb-3">
+                    <!-- Temporary schedule items will be dynamically added here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
 
-<script type="text/javascript">
-    $(document).ready(function() {
-        console.log("Document is ready");
-
-        $('#roomModal').on('show.bs.modal', function (event) {
-            var button = $(event.relatedTarget);  // Button that triggered the modal
-            var roomId = button.data('id');  // Extract info from data-* attributes
-            console.log("Room ID:", roomId);  // Log the room ID
-            var modal = $(this);
-
-            if (roomId === undefined) {
-                console.error("Room ID is undefined");
-                return;  // Exit if roomId is undefined
-            }
-
-            // Clear previous content
-            modal.find('.modal-body').html('');
-
-            // Load new content
-            $.ajax({
-                url: "{% url 'room_modal' roomid=0 %}".replace('0', roomId),
-                success: function(data) {
-                    console.log("AJAX success:", data);
-                    modal.find('.modal-body').html(data);
-
-                    // After loading the content, fetch the room status
-                    $.ajax({
-                        url: "{% url 'check_occupancy' roomid=0 %}".replace('0', roomId),
-                        method: "GET",
-                        success: function(statusData) {
-                            var statusElement = modal.find("#room-status");
-                            if (statusData.isOccupied) {
-                                statusElement.html(
-                                    'Status: <span class="text-danger">Occupied</span>'
-                                );
-                            } else {
-                                statusElement.html(
-                                    'Status: <span class="text-success">Unoccupied</span>'
-                                );
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            console.error("Error checking occupancy:", error);
-                        }
-                    });
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error loading modal content:", error);
-                }
-            });
-        });
-
-        // Function to update room details
-        function updateRoomDetails() {
-            $.ajax({
-                url: "{% url 'get_rooms' %}",
-                method: "GET",
-                success: function(data) {
-                    console.log("Room details update:", data);
-                    const roomIds = data.rooms.map(room => room.id);
-                    const existingRoomIds = $(".rooms").map(function() {
-                        return $(this).data("id");
-                    }).get();
-
-                    // Add new rooms
-                    data.rooms.forEach(function(room) {
-                        if (!existingRoomIds.includes(room.id)) {
-                            $("#roomContainer").append(
-                                `<div id="room-${room.id}" class="p-4 card rooms text-center font-weight-bold ${room.isOccupied ? 'bg-danger' : 'bg-success'}" style="width: 150px; height: 120px;" data-toggle="modal" data-target="#roomModal" data-id="${room.id}">
-                                    <p>Room No.</p>
-                                    <p class="room-number">${room.number}</p>
-                                </div>`
-                            );
-                        }
-                    });
-
-                    // Remove deleted rooms
-                    existingRoomIds.forEach(function(id) {
-                        if (!roomIds.includes(id)) {
-                            $(`#room-${id}`).remove();
-                        }
-                    });
-
-                    // Update existing rooms
-                    data.rooms.forEach(function(room) {
-                        var roomElement = $(`#room-${room.id}`);
-
-                        // Update room number
-                        roomElement.find('.room-number').text(room.number);
-
-                        // Update room status
-                        if (room.isOccupied) {
-                            roomElement.removeClass('bg-success').addClass('bg-danger');
-                        } else {
-                            roomElement.removeClass('bg-danger').addClass('bg-success');
-                        }
-                    });
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error updating room details:", error);
-                }
-            });
-        }
-
-        // Update room details every 5 seconds (instead of 10)
-        setInterval(updateRoomDetails, 1000);
-
-        // Initial details update
-        updateRoomDetails();
-
-        // Display current date in real-time
-        function displayCurrentDate() {
-            var currentDate = new Date().toLocaleDateString();
-            $("#currentDate").text(currentDate);
-        }
-
-        // Update current date every day
-        setInterval(displayCurrentDate, 86400000);  // 24 hours in milliseconds
-
-        // Initial date display
-        displayCurrentDate();
-    });
-</script>
-
-
+<!-- CSS and JS -->
+<link href="{% static 'css/classroom.css' %}" rel="stylesheet">
+<script src="{% static 'js/classroom.js' %}"></script>
 {% endblock %}

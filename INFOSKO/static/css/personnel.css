@@ -1,0 +1,144 @@
+/*Faculty Members*/
+/* Key Personnel Section */
+.key-personnel-container {
+    display: flex;
+    flex-direction: column; 
+    align-items: center; /* Center the rows */
+    margin-bottom: 50px;
+}
+
+.key-personnel-row {
+    display: flex;
+    justify-content: center; /* Center the images in each row */
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.key-personnel-row:nth-child(2) {
+    gap: 30px; /* Adds some space between the bottom personnel */
+}
+
+/* Personnel Images */
+.person-image-container {
+    position: relative;
+    display: inline-block;
+    text-align: center;
+    margin: 10px;
+}
+
+.person-image {
+    border-radius: 50%;
+    width: 150px;
+    height: 150px;
+    border: 2px solid black;
+}
+
+.person-name {
+    margin-top: 5px;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+/* Centering the Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1050; 
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#modal-name {
+    font-size: 24px;     /* Larger font size */
+    font-weight: bold;   /* Bold font */
+    text-align: center;  /* Center the name */
+    margin-bottom: 20px; /* Add spacing below the name */
+}
+
+
+.modal-content {
+    padding: 20px;
+    border: 2px solid black !important; 
+    width: 90%;
+    max-width: 500px;
+    text-align:left;
+    margin: auto;
+    margin-top: 200px;
+}
+
+#modal-position, #modal-contact, #modal-location {
+    font-size: 20px;  
+    font-weight: bold;   /* Decent font size */
+    text-align: left;    /* Align text to the left */
+    margin-bottom: 10px; /* Add spacing between the elements */
+    width: 100%;         /* Full width for alignment */
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#modal-image {
+    border-radius: 50%;
+    width: 300px;
+    height: 300px;
+    border: 2px solid black;
+    margin-bottom: 20px;
+}
+
+.close {
+    color: black;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    position: absolute;
+    z-index: 5;
+    top: 10px;
+    right: 20px;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#key-persons-header {
+    margin-top: 20px;
+    font-size: 1.8rem;
+}
+
+#no-results-container {
+    display: flex;
+    justify-content: center;  /* Centers horizontally */
+    align-items: center;      /* Centers vertically */
+    height: 450px;            /* Adjust this as needed */
+}
+
+#no-results-alert {
+    font-size: 30px;
+    color: red;
+    text-align: center;
+    margin-top: 235px;
+}
+
+/* Style for the red border when search input is empty */
+#input-error {
+    border: 1px solid red;  /* Red border to highlight error */
+}
+
+/*footer*/
+footer.fixed-bottom {
+    z-index: 1030; /* Ensure the footer stays below modals */
+}
