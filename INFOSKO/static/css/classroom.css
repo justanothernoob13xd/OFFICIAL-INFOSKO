@@ -66,8 +66,8 @@
 }
 
 .modal-body {
-  font-size: 16px;
-  line-height: 1.5;
+  overflow-y: auto; /* Enable scrolling for large schedules */
+  max-height: 80vh; /* Limit height to viewport */
 }
 
 .modal-footer {
@@ -75,16 +75,15 @@
 }
 
 .table {
+  table-layout: fixed;
   width: 100%;
-  border-collapse: collapse;
-  margin: 20px 0;
 }
 
 .table th, .table td {
   border: 1px solid #ddd;
   text-align: center;
-  padding: 10px;
-  vertical-align: middle; /* Ensures content aligns vertically */
+  vertical-align: middle;
+  word-wrap: break-word;
 }
 
 .table th {
