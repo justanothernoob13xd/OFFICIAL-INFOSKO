@@ -2,8 +2,10 @@ $(document).ready(function () {
     console.log("Page loaded. Fetching rooms...");
     fetchRooms(); // Initial fetch
 
-    // Poll for room updates every second
-    setInterval(fetchRooms, 1000);
+    // Poll for room updates every 5 seconds
+    setInterval(fetchRooms, 5000);
+
+    let modalPollingInterval;
 
     async function fetchRooms() {
         try {
@@ -18,16 +20,18 @@ $(document).ready(function () {
                 roomsContainer.append('<p class="text-center text-muted w-100">NO CLASSROOMS AVAILABLE</p>');
             } else {
                 data.rooms.forEach(room => {
-                    console.log("Processing room:", room);
-                    const button = $(`<button class="btn w-100 room-button btn-${room.isOccupied ? 'danger' : 'secondary'}" 
+                    const button = $(`
+                        <div class="col">
+                            <button class="btn w-100 room-button btn-secondary" 
                                     data-room-id="${room.id}" 
                                     data-room-name="${room.name}">
                                 ${room.name}
-                            </button>`);
+                            </button>
+                        </div>`);
                     roomsContainer.append(button);
                 });
 
-                bindRoomButtonClick(); // Rebind click events after adding new buttons
+                bindRoomButtonClick();
             }
         } catch (error) {
             console.error("Error fetching room data:", error);
@@ -45,73 +49,159 @@ $(document).ready(function () {
             }
 
             // Set modal title
-            $('#roomModalLabel').text(`Schedule for ${roomName}`);
+            $('#roomModalLabel').text(`Weekly Schedule for ${roomName}`);
+            $('#roomName').text(roomName);
 
-            // Clear previous modal content
-            $('#regularScheduleContainer').empty();
-            $('#temporaryScheduleContainer').empty();
+            // Fetch room schedule and start polling
+            fetchAndUpdateModal(roomId);
 
-            // Fetch room schedule via API
-            console.log(`Fetching schedule for Room ID: ${roomId}`);
-            $.ajax({
-                url: `/api/room-schedule/${roomId}/`,
-                type: 'GET',
-                success: function (response) {
-                    console.log("Schedule fetched successfully:", response);
-                    populateSchedules(response);
+            // Start polling modal content every 5 seconds
+            if (modalPollingInterval) clearInterval(modalPollingInterval);
+            modalPollingInterval = setInterval(() => fetchAndUpdateModal(roomId), 5000);
 
-                    // Show the modal
-                    const modal = new bootstrap.Modal(document.getElementById('roomModal'));
-                    modal.show();
-                },
-                error: function (xhr, status, error) {
-                    console.error("Error fetching schedule:", error);
-                    $('#regularScheduleContainer, #temporaryScheduleContainer').html('<p class="text-danger">Failed to load schedule details. Please try again later.</p>');
-                }
+            // Show the modal
+            $('#roomModal').modal('show');
+
+            // Stop polling when the modal is hidden
+            $('#roomModal').on('hidden.bs.modal', function () {
+                clearInterval(modalPollingInterval);
             });
         });
     }
 
-    function populateSchedules(response) {
-        // Debug the API response
-        console.log("Populating schedules with response:", response);
-
-        // Populate Regular Schedule
-        const regularScheduleContainer = $('#regularScheduleContainer');
-        regularScheduleContainer.empty();
-
-        if (!response.regularSchedules || response.regularSchedules.length === 0) {
-            regularScheduleContainer.append('<p class="text-muted">No regular schedule available for today.</p>');
-        } else {
-            response.regularSchedules.forEach(schedule => {
-                regularScheduleContainer.append(`
-                    <p>
-                        <strong>${schedule.class_name}</strong><br>
-                        ${schedule.start_time} - ${schedule.end_time}<br>
-                        Section: ${schedule.section}<br>
-                        Professor: ${schedule.professor}
-                    </p>
-                `);
-            });
-        }
-
-        // Populate Temporary Schedule
-        const temporaryScheduleContainer = $('#temporaryScheduleContainer');
-        temporaryScheduleContainer.empty();
-
-        if (!response.temporarySchedules || response.temporarySchedules.length === 0) {
-            temporaryScheduleContainer.append('<p class="text-muted">No temporary schedule available for today.</p>');
-        } else {
-            response.temporarySchedules.forEach(schedule => {
-                temporaryScheduleContainer.append(`
-                    <p>
-                        <strong>${schedule.class_name}</strong><br>
-                        ${schedule.start_time} - ${schedule.end_time}<br>
-                        Section: ${schedule.section}<br>
-                        Professor: ${schedule.professor}
-                    </p>
-                `);
-            });
+    async function fetchAndUpdateModal(roomId) {
+        try {
+            console.log(`Fetching schedule for room ID: ${roomId}`);
+            const response = await fetch(`/api/room-schedule/${roomId}/`);
+            const data = await response.json();
+            console.log("Fetched schedule data:", data);
+            populateWeeklyTable(data);
+        } catch (error) {
+            console.error("Error fetching room schedule:", error);
         }
     }
+
+    function populateWeeklyTable(response) {
+        console.log("Response received:", response);
+        const scheduleTable = $('#scheduleTableBody');
+        console.log("Table body:", scheduleTable);
+        scheduleTable.empty();
+    
+        const timeslots = generateTimeSlots("07:30 AM", "09:00 PM", 30);
+        console.log("Generated timeslots:", timeslots);
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+        timeslots.forEach((timeSlot) => {
+            console.log(`Populating time slot: ${timeSlot}`);
+            const row = $('<tr>');
+            row.append(`<td>${timeSlot}</td>`);
+    
+            days.forEach((day) => {
+                const cell = $('<td>');
+                const schedules = getSchedulesForTimeSlot(response, day, timeSlot);
+    
+                console.log(`Schedules for ${day}, ${timeSlot}:`, schedules);
+    
+                if (schedules.length > 0) {
+                    schedules.forEach(schedule => {
+                        const scheduleItem = $('<div>')
+                            .addClass('schedule-item regular-schedule')
+                            .html(`
+                                <strong>${schedule.class_name}</strong><br>
+                                ${schedule.section}<br>
+                                ${schedule.start_time} - ${schedule.end_time}<br>
+                                ${schedule.professor}
+                            `);
+                        cell.append(scheduleItem);
+                    });
+                }
+                row.append(cell);
+            });
+    
+            scheduleTable.append(row);
+        });
+    
+        console.log("Table population completed.");
+    }
+
+    function convertToMinutes(time) {
+        const [hours, minutes, period] = time.match(/(\d+):(\d+)\s(AM|PM)/).slice(1);
+        let totalMinutes = parseInt(hours) % 12 * 60 + parseInt(minutes);
+        if (period === 'PM') totalMinutes += 12 * 60;
+        return totalMinutes;
+    }
+    
+    function generateTimeSlots(startTime, endTime, intervalMinutes) {
+        const times = [];
+        let current = new Date(`2000-01-01T${convertTo24HourFormat(startTime)}`);
+        const end = new Date(`2000-01-01T${convertTo24HourFormat(endTime)}`);
+    
+        while (current < end) {
+            const next = new Date(current);
+            next.setMinutes(current.getMinutes() + intervalMinutes);
+    
+            const formatTime = (time) =>
+                time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    
+            times.push(`${formatTime(current)} - ${formatTime(next)}`);
+            current = next;
+        }
+    
+        return times;
+    }
+    
+    // Helper function to convert 12-hour time to 24-hour format
+    function convertTo24HourFormat(time) {
+        const [hours, minutes, period] = time.match(/(\d+):(\d+)\s(AM|PM)/).slice(1);
+        let hour = parseInt(hours);
+        if (period === 'PM' && hour !== 12) {
+            hour += 12;
+        } else if (period === 'AM' && hour === 12) {
+            hour = 0;
+        }
+        return `${hour.toString().padStart(2, '0')}:${minutes}`;
+    }
+    
+    function getSchedulesForTimeSlot(response, day, timeSlot) {
+        console.log("DEBUG: Entered getSchedulesForTimeSlot");
+        console.log(`Checking time slot: ${timeSlot} for day: ${day}`);
+    
+        const [slotStart, slotEnd] = timeSlot.split(' - ');
+        const slotStartMinutes = convertToMinutes(slotStart);
+        const slotEndMinutes = convertToMinutes(slotEnd);
+    
+        const schedules = [...response.regularSchedules, ...response.temporarySchedules];
+        console.log("Schedules to filter:", schedules);
+    
+        const filtered = schedules.filter(schedule => {
+            const scheduleStartMinutes = convertToMinutes(schedule.start_time);
+            const scheduleEndMinutes = convertToMinutes(schedule.end_time);
+            const scheduleDay = schedule.day || "";
+    
+            const isDayMatch = scheduleDay.toLowerCase() === day.toLowerCase();
+            const isTimeOverlap = scheduleStartMinutes < slotEndMinutes && scheduleEndMinutes > slotStartMinutes;
+    
+            console.log(`Evaluating schedule:`, schedule);
+            console.log(`Day Match: ${isDayMatch}, Time Overlap: ${isTimeOverlap}`);
+    
+            return isDayMatch && isTimeOverlap;
+        });
+    
+        console.log("Filtered schedules:", filtered);
+        return filtered;
+    }
+    
+    
+
+    // Remove expired schedules
+    function removeExpiredSchedules() {
+        const now = new Date();
+        $('.schedule-item').each(function () {
+            const endTime = new Date($(this).data('end-time')); // Assuming you store end time as a data attribute
+            if (endTime < now) {
+                $(this).remove();
+            }
+        });
+    }
+    setInterval(removeExpiredSchedules, 1000); // Check every second
 });

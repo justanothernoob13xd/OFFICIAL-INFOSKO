@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import JsonResponse
 from django.utils.timezone import localtime
+from datetime import timedelta
 from django.db.models import Case, When, Value, CharField, Q, IntegerField
 from django.core.files.storage import default_storage
 from rest_framework import viewsets
@@ -56,24 +57,39 @@ def room_schedule_api(request, room_id):
         logger.info(f"Fetching schedule for room ID: {room_id}")
         room = get_object_or_404(Room, id=room_id)
         current_date = localtime().date()
-        logger.info(f"Current date: {current_date}")
 
-        # Fetch schedules for today
-        schedules = RoomSchedule.objects.filter(room=room, date=current_date).order_by('start_time')
+        # Calculate start and end of the week (Monday-Sunday)
+        start_of_week = current_date - timedelta(days=current_date.weekday())
+        end_of_week = start_of_week + timedelta(days=6)
+
+        logger.info(f"Fetching schedules from {start_of_week} to {end_of_week}")
+
+        # Fetch schedules for the whole week
+        schedules = RoomSchedule.objects.filter(room=room, date__range=(start_of_week, end_of_week)).order_by('date', 'start_time')
         logger.info(f"Schedules fetched: {schedules}")
 
         regular_schedules = []
         temporary_schedules = []
 
         for schedule in schedules:
+            # Add `day` to each schedule
             schedule_data = {
                 'class_name': schedule.subject_name,
                 'section': schedule.section_name,
                 'professor': schedule.professor_name,
                 'start_time': schedule.start_time.strftime('%I:%M %p'),
                 'end_time': schedule.end_time.strftime('%I:%M %p'),
+                'day': schedule.date.strftime('%A'),  # Convert date to day of the week
             }
+
             if schedule.schedule_type == 'regular':
+                # Check if this schedule is overridden by any temporary schedule
+                schedule_data['overridden'] = any(
+                    temp_schedule.start_time < schedule.end_time and
+                    temp_schedule.end_time > schedule.start_time and
+                    temp_schedule.date == schedule.date
+                    for temp_schedule in schedules.filter(schedule_type='temporary')
+                )
                 regular_schedules.append(schedule_data)
             elif schedule.schedule_type == 'temporary':
                 temporary_schedules.append(schedule_data)
@@ -89,22 +105,129 @@ def room_schedule_api(request, room_id):
         logger.error(f"Error fetching room schedule: {str(e)}")
         return JsonResponse({'error': f"Error fetching schedule: {str(e)}"}, status=500)
 
-
 # Function to clean up expired temporary schedules
 def cleanup_expired_temporary_schedules():
     try:
         now_time = localtime().time()
         now_date = localtime().date()
         expired_schedules = RoomSchedule.objects.filter(
-            schedule_type="temporary",
-            end_time__lt=now_time,
-            date__lt=now_date
+            schedule_type="temporary"
+        ).filter(
+            Q(date__lt=now_date) |
+            Q(date=now_date, end_time__lt=now_time)
         )
         deleted_count, _ = expired_schedules.delete()
 
         logger.info(f"Cleaned up {deleted_count} expired temporary schedules.")
     except Exception as e:
         logger.exception(f"Error while cleaning up expired temporary schedules: {e}")
+
+
+#csv functionality for classroom
+logger = logging.getLogger(__name__)
+
+# CSV Upload for Classrooms
+from django.shortcuts import render, redirect
+from django.contrib import messages
+import csv
+from .models import Room, RoomSchedule
+
+def upload_csv_classroom(request):
+    if request.method == "POST":
+        csv_file = request.FILES.get('csv_file')
+        if not csv_file:
+            messages.error(request, "No file selected! Please upload a file.")
+            return render(request, 'admin/classroom_csv_upload.html')
+
+        if not csv_file.name.endswith('.csv'):
+            messages.error(request, "Invalid file type! Please upload a .csv file.")
+            return render(request, 'admin/classroom_csv_upload.html')
+
+        try:
+            decoded_file = csv_file.read().decode('utf-8-sig').splitlines()
+            csv_reader = csv.DictReader(decoded_file)
+
+            preview_data = []
+            warnings = []
+
+            for idx, row in enumerate(csv_reader, start=1):
+                cleaned_row = {k.strip().lower(): v.strip() for k, v in row.items()}
+                missing_fields = []
+
+                # Check for missing required fields
+                if not cleaned_row.get('room'):
+                    missing_fields.append("Room")
+                if not cleaned_row.get('date'):
+                    missing_fields.append("Date")
+                if not cleaned_row.get('start_time'):
+                    missing_fields.append("Start Time")
+                if not cleaned_row.get('end_time'):
+                    missing_fields.append("End Time")
+
+                # Collect warnings for problematic rows
+                if missing_fields:
+                    warnings.append(
+                        {"row": idx, "missing_fields": missing_fields, "data": cleaned_row}
+                    )
+
+                preview_data.append(cleaned_row)
+
+            # Store preview data and warnings in session
+            request.session['csv_preview_data'] = preview_data
+            request.session['csv_warnings'] = warnings
+
+            if warnings:
+                messages.warning(request, f"{len(warnings)} rows have potential issues. Please review them.")
+
+            return redirect('confirm_csv_upload_classroom')
+
+        except Exception as e:
+            messages.error(request, f"Error processing file: {e}")
+            return render(request, 'admin/classroom_csv_upload.html')
+
+    return render(request, 'admin/classroom_csv_upload.html')
+
+def confirm_csv_upload_classroom(request):
+    preview_data = request.session.get('csv_preview_data', [])
+    warnings = request.session.get('csv_warnings', [])
+
+    if not preview_data:
+        messages.error(request, "No data available for import.")
+        return redirect('upload_csv_classroom')
+
+    if request.method == "POST":
+        action = request.POST.get('action')
+
+        if action == "confirm":
+            # Save data to the database
+            try:
+                for row in preview_data:
+                    RoomSchedule.objects.update_or_create(
+                        room=row.get('room'),
+                        defaults={
+                            'date': row.get('date'),
+                            'start_time': row.get('start_time'),
+                            'end_time': row.get('end_time'),
+                        }
+                    )
+                messages.success(request, "All classroom schedules imported successfully!")
+                del request.session['csv_preview_data']
+                del request.session['csv_warnings']
+                return redirect('/admin/main/roomschedule/')
+            except Exception as e:
+                messages.error(request, f"An error occurred while saving data: {e}")
+                return redirect('confirm_csv_upload_classroom')
+
+        elif action == "cancel":
+            del request.session['csv_preview_data']
+            del request.session['csv_warnings']
+            messages.info(request, "CSV upload canceled.")
+            return redirect('/admin/main/roomschedule/')
+
+    return render(request, 'admin/confirm_csv_upload.html', {
+        'preview_data': preview_data,
+        'warnings': warnings
+    })
 
 #personnel/faculties
 def faculties(request):

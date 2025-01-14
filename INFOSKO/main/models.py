@@ -37,18 +37,6 @@ class RoomSchedule(models.Model):
         default='regular',
     )
     date = models.DateField()
-    day_of_week = models.CharField(
-        max_length=10,
-        choices=[
-            ('Monday', 'Monday'),
-            ('Tuesday', 'Tuesday'),
-            ('Wednesday', 'Wednesday'),
-            ('Thursday', 'Thursday'),
-            ('Friday', 'Friday'),
-            ('Saturday', 'Saturday'),
-            ('Sunday', 'Sunday'),
-        ],
-    )
     start_time = models.TimeField()
     end_time = models.TimeField()
     professor_name = models.CharField(max_length=100, blank=True, null=True)
@@ -57,10 +45,6 @@ class RoomSchedule(models.Model):
 
     def clean(self):
         actual_day = self.date.strftime('%A')
-        if actual_day != self.day_of_week:
-            raise ValidationError(
-                f"The selected date ({self.date}) does not match the selected day ({self.day_of_week})."
-            )
 
     def is_expired(self):
         now = localtime()
@@ -82,6 +66,22 @@ class Command(BaseCommand):
         deleted_count, _ = expired_schedules.delete()
         self.stdout.write(f"Deleted {deleted_count} expired temporary schedules.")
 
+class Semester(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    start_date = models.DateField()
+    end_date = models.DateField()
+
+    def clean(self):
+        # Check for overlapping semesters
+        overlapping_semesters = Semester.objects.filter(
+            start_date__lt=self.end_date,  # Starts before this semester ends
+            end_date__gt=self.start_date  # Ends after this semester starts
+        ).exclude(id=self.id)  # Exclude the current semester being edited
+        if overlapping_semesters.exists():
+            raise ValidationError("Semester dates cannot overlap with another semester.")
+
+    def __str__(self):
+        return f"{self.name} ({self.start_date} to {self.end_date})"
 
 # Model for Faculties
 class Personnel(models.Model):

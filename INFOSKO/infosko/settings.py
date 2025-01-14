@@ -151,6 +151,15 @@ DEBUG = True
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 
 # Results backend (optional for saving task results)
-CELERY_RESULT_BACKEND = 'django-db'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
+
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'cleanup-temporary-schedules': {
+        'task': 'main.tasks.cleanup_expired_temporary_schedules',
+        'schedule': crontab(minute='*/1'),  # Runs every minute for testing
+    },
+}

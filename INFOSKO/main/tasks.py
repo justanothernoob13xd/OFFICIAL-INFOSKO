@@ -9,7 +9,7 @@ def cleanup_expired_temporary_schedules():
     expired_schedules = RoomSchedule.objects.filter(
         schedule_type="temporary",
         end_time__lt=now_time,
-        date__lt=now_date
+        date__lte=now_date
     )
     deleted_count, _ = expired_schedules.delete()
     return f"Deleted {deleted_count} expired temporary schedules"

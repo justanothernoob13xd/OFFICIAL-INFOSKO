@@ -3,7 +3,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from . import views 
 from rest_framework.routers import DefaultRouter
-from .views import PersonnelViewSet, index, faculties, navigation, secfloor, thrdfloor, fourthfloor, personnel_list, personnel_suggestions
+from .views import PersonnelViewSet, index, faculties, navigation, secfloor, thrdfloor, fourthfloor, personnel_list, personnel_suggestions, upload_csv_classroom
 router = DefaultRouter()
 router.register(r'personnel', PersonnelViewSet,)
 
@@ -22,7 +22,7 @@ urlpatterns = [
     path('classroom/', views.classroom, name='classroom'),
     path('api/room-schedule/<int:room_id>/', views.room_schedule_api, name='room_schedule_api'),
     path('api/get-rooms/', views.get_rooms, name='get_rooms'),
-    
+    path('upload-classroom-csv/', views.upload_csv_classroom, name='upload_classroom_csv'),
 ]
 
 if settings.DEBUG:  # Only serve media files in development

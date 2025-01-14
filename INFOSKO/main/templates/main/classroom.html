@@ -15,8 +15,8 @@
 </nav>
 
 <!-- Main Content -->
-<div class="container mt-5">
-    <div class="card p-4 shadow-sm">
+<div id="main-container" class="container mt-5">
+    <div class="card p-3 shadow-sm">
         <h2 class="text-center">Dynamic Classroom Viewer</h2>
         <p class="text-muted text-center">Click on a room to view more details about its schedule.</p>
         <p class="text-muted text-center">
@@ -24,44 +24,52 @@
             <span class="text-danger fw-bold">Red</span> = Occupied,
             <span class="text-success fw-bold">Green</span> = Unoccupied
         </p>
+        <p class="text-muted text-center">
+            <strong>Note:</strong> Schedules marked as <span class="text-danger">"Overridden"</span> indicate that a temporary schedule is currently in effect, replacing the regular schedule for the specified time.
+        </p>
 
-        <!-- Room Buttons -->
-        <div id="rooms-container" class="row mt-4">
-            {% for room in rooms %}
-            <div class="col-md-4 mb-3">
-                <button 
-                    class="btn w-100 room-button btn-primary" 
-                    data-room-id="{{ room.id }}" 
-                    data-room-name="{{ room.name }}">
-                    {{ room.name }}
-                </button>
-            </div>
-            {% empty %}
-            <p class="text-center text-muted w-100">NO CLASSROOMS AVAILABLE</p>
-            {% endfor %}
-        </div>
+<!-- Room Buttons -->
+<div id="rooms-container" class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-3 justify-content-center">
+    {% for room in rooms %}
+    <div class="col">
+        <button 
+            class="btn btn-primary room-button text-center" 
+            data-room-id="{{ room.id }}" 
+            data-room-name="{{ room.name }}">
+            {{ room.name }}
+        </button>
     </div>
+    {% empty %}
+    <p class="no-classrooms-message">NO CLASSROOMS AVAILABLE</p>
+    {% endfor %}
 </div>
 
 <!-- Modals -->
-<!-- Room Modal -->
-<div class="modal" style="margin-top: 12rem;" id="roomModal" tabindex="-1" aria-labelledby="roomModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade" id="roomModal" tabindex="-1" aria-labelledby="roomModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="roomModalLabel">Schedule for <span id="roomName"></span></h5>
+                <h5 class="modal-title" id="roomModalLabel">Weekly Schedule for <span id="roomName"></span></h5>
             </div>
-            <div class="modal-body">
-                <!-- Regular Schedule Section -->
-                <h5>Regular Schedule</h5>
-                <div id="regularScheduleContainer" class="mb-3">
-                    <!-- Regular schedule items will be dynamically added here -->
-                </div>
-
-                <!-- Temporary Schedule Section -->
-                <h5>Temporary Schedule</h5>
-                <div id="temporaryScheduleContainer" class="mb-3">
-                    <!-- Temporary schedule items will be dynamically added here -->
+            <div class="modal-body" style="max-height: 600px; overflow-y: auto;">
+                <!-- Responsive Table -->
+                <div class="table-responsive">
+                    <table class="table table-bordered text-center" id="scheduleTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Time</th>
+                                <th>Monday</th>
+                                <th>Tuesday</th>
+                                <th>Wednesday</th>
+                                <th>Thursday</th>
+                                <th>Friday</th>
+                                <th>Saturday</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows will be dynamically populated -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
             <div class="modal-footer">
@@ -70,6 +78,7 @@
         </div>
     </div>
 </div>
+
 
 <!-- CSS and JS -->
 <link href="{% static 'css/classroom.css' %}" rel="stylesheet">

@@ -1,0 +1,16 @@
+{% extends "admin/change_list.html" %}
+{% block content %}
+<h2>Upload CSV</h2>
+<form method="POST" enctype="multipart/form-data" action="{% url 'upload_classroom_csv' %}" class="row g-3">
+    {% csrf_token %}
+    <div class="col-12">
+        <label for="csv_file" class="form-label">Select CSV File:</label>
+        <input type="file" name="csv_file" id="csv_file" class="form-control" accept=".csv" required>
+    </div>
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary">Upload</button>
+    </div>
+</form>
+<br>
+{{ block.super }}
+{% endblock %}
