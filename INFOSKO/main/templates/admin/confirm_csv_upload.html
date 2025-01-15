@@ -21,29 +21,27 @@
 <table class="table table-bordered">
     <thead>
         <tr>
-            <th>Name</th>
-            <th>Contact</th>
-            <th>Location</th>
-            <th>Employment Type</th>
-            <th>Department Position</th>
-            <th>Image</th>
+            <th>Room Name</th>
+            <th>Day</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Class Name</th>
+            <th>Section</th>
+            <th>Professor</th>
+            <th>Type</th>
         </tr>
     </thead>
     <tbody>
         {% for row in preview_data %}
         <tr>
-            <td>{{ row.name }}</td>
-            <td>{{ row.contact }}</td>
-            <td>{{ row.location }}</td>
-            <td>{{ row.employment_type }}</td>
-            <td>{{ row.department_position }}</td>
-            <td>
-                {% if row.image %}
-                    <img src="{{ row.image }}" alt="Personnel Image" style="max-height: 50px; max-width: 50px;">
-                {% else %}
-                    <img src="{{ MEDIA_URL }}defaultpic.jpg" alt="Default Image" style="max-height: 50px; max-width: 50px;">
-                {% endif %}
-            </td>
+            <td>{{ row.room_name }}</td>
+            <td>{{ row.day }}</td>
+            <td>{{ row.start_time }}</td>
+            <td>{{ row.end_time }}</td>
+            <td>{{ row.class_name }}</td>
+            <td>{{ row.section_name }}</td>
+            <td>{{ row.professor_name }}</td>
+            <td>{{ row.schedule_type }}</td>
         </tr>
         {% endfor %}
     </tbody>

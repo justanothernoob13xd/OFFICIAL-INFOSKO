@@ -23,11 +23,20 @@ class Room(models.Model):
     def __str__(self):
         return self.number
     
-# RoomSchedule Model
 class RoomSchedule(models.Model):
     SCHEDULE_TYPES = [
         ('regular', 'Regular'),
         ('temporary', 'Temporary'),
+    ]
+
+    DAY_CHOICES = [
+        ('Monday', 'Monday'),
+        ('Tuesday', 'Tuesday'),
+        ('Wednesday', 'Wednesday'),
+        ('Thursday', 'Thursday'),
+        ('Friday', 'Friday'),
+        ('Saturday', 'Saturday'),
+        ('Sunday', 'Sunday'),
     ]
 
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
@@ -36,26 +45,55 @@ class RoomSchedule(models.Model):
         choices=SCHEDULE_TYPES,
         default='regular',
     )
-    date = models.DateField()
+    day = models.CharField(max_length=10, choices=[
+    ('Monday', 'Monday'),
+    ('Tuesday', 'Tuesday'),
+    ('Wednesday', 'Wednesday'),
+    ('Thursday', 'Thursday'),
+    ('Friday', 'Friday'),
+    ('Saturday', 'Saturday'),
+    ('Sunday', 'Sunday'),
+], default='Monday')
+
     start_time = models.TimeField()
     end_time = models.TimeField()
     professor_name = models.CharField(max_length=100, blank=True, null=True)
     subject_name = models.CharField(max_length=100, blank=True, null=True)
     section_name = models.CharField(max_length=100, blank=True, null=True)
+    overridden = models.BooleanField(default=False)  # Indicates if this schedule is overridden by a temporary schedule
 
     def clean(self):
-        actual_day = self.date.strftime('%A')
+        overlapping_schedules = RoomSchedule.objects.filter(
+            room=self.room,
+            day=self.day,
+            start_time__lt=self.end_time,
+            end_time__gt=self.start_time,
+        ).exclude(pk=self.pk)
 
-    def is_expired(self):
-        now = localtime()
-        return self.schedule_type == 'temporary' and (
-            now.date() > self.date or (now.date() == self.date and now.time() > self.end_time)
-        )
+        if self.schedule_type == 'temporary':
+            # Allow temporary schedules to overlap but mark regular schedules as overridden
+            for schedule in overlapping_schedules:
+                if schedule.schedule_type == 'regular':
+                    schedule.overridden = True
+                    schedule.save()
+        elif self.schedule_type == 'regular':
+            # Prevent regular schedules from overlapping with other regular schedules
+            if overlapping_schedules.filter(schedule_type='regular').exists():
+                raise ValidationError("Regular schedules cannot overlap with another regular schedule.")
 
     def __str__(self):
-        return f"{self.schedule_type.capitalize()} Schedule for Room {self.room.number} on {self.date}"
-class Command(BaseCommand):
-    help = "Clean up expired temporary schedules"
+        return f"{self.schedule_type.capitalize()} Schedule for Room {self.room.number} on {self.day}"
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['room', 'day', 'start_time', 'end_time', 'schedule_type'],
+                name='unique_schedule_per_day_type'
+            )
+        ]
+
+    class Command(BaseCommand):
+        help = "Clean up expired temporary schedules"
 
     def handle(self, *args, **kwargs):
         now = localtime()

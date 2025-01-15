@@ -32,18 +32,30 @@ def cleanup_expired_schedules_action(modeladmin, request, queryset):
     cleanup_expired_temporary_schedules()
     messages.success(request, "Expired temporary schedules cleaned up successfully!")
 
+logger = logging.getLogger(__name__)
+
 # RoomSchedule Admin
 class RoomScheduleAdmin(admin.ModelAdmin):
-    list_display = ("room", "formatted_date", "formatted_time")
-    actions = [cleanup_expired_schedules_action]
+    list_display = ['room', 'schedule_type', 'day', 'start_time', 'end_time', 'professor_name', 'subject_name', 'section_name']
+    list_filter = ['schedule_type', 'day', 'room']
+    search_fields = ['subject_name', 'professor_name', 'section_name']
+    actions = ['cleanup_expired_schedules_action']
 
-    @admin.display(description="Date")
-    def formatted_date(self, obj):
-        return obj.date.strftime("%b %d, %Y")
+    @admin.display(description="Day")
+    def formatted_day(self, obj):
+        return obj.get_day_display()  # Returns readable day names like "Monday"
 
     @admin.display(description="Time")
     def formatted_time(self, obj):
         return f"{obj.start_time.strftime('%I:%M %p')} - {obj.end_time.strftime('%I:%M %p')}"
+
+    def cleanup_expired_schedules_action(self, request, queryset):
+        expired_schedules = queryset.filter(schedule_type='temporary', overridden=True)
+        count = expired_schedules.count()
+        expired_schedules.delete()
+        self.message_user(request, f"{count} expired temporary schedules were deleted.")
+
+# Room Admin
 class RoomAdmin(admin.ModelAdmin):
     list_display = ('number', 'occupied')
     change_list_template = "admin/room_changelist.html"  # Custom template for the changelist page
@@ -77,7 +89,7 @@ class RoomAdmin(admin.ModelAdmin):
                 csv_file = form.cleaned_data['csv_file']
                 if not csv_file.name.endswith('.csv'):
                     self.message_user(request, "Please upload a valid CSV file.", level='error')
-                    return HttpResponseRedirect(request.path)
+                    return redirect(request.path)
 
                 csv_data = csv_file.read().decode('utf-8').splitlines()
                 csv_reader = csv.DictReader(csv_data)
@@ -85,7 +97,7 @@ class RoomAdmin(admin.ModelAdmin):
 
                 if not rows:
                     self.message_user(request, "The uploaded CSV file is empty.", level='error')
-                    return HttpResponseRedirect(request.path)
+                    return redirect(request.path)
 
                 request.session['csv_preview_data'] = rows
                 logger.info("Preview data saved in session")

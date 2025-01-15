@@ -2,8 +2,7 @@ $(document).ready(function () {
     console.log("Page loaded. Fetching rooms...");
     fetchRooms(); // Initial fetch
 
-    // Poll for room updates every 5 seconds
-    setInterval(fetchRooms, 5000);
+    setInterval(fetchRooms, 5000); // Poll for room updates every 5 seconds
 
     let modalPollingInterval;
 
@@ -74,50 +73,98 @@ $(document).ready(function () {
             console.log(`Fetching schedule for room ID: ${roomId}`);
             const response = await fetch(`/api/room-schedule/${roomId}/`);
             const data = await response.json();
-            console.log("Fetched schedule data:", data);
-            populateWeeklyTable(data);
+
+            // Inject type property into schedules
+            data.regularSchedules.forEach(schedule => (schedule.type = 'regular'));
+            data.temporarySchedules.forEach(schedule => (schedule.type = 'temporary'));
+
+            console.log("Fetched schedule data with types:", data);
+            const updatedData = filterExpiredTemporarySchedules(data); // Filter expired schedules
+            populateWeeklyTable(updatedData);
         } catch (error) {
             console.error("Error fetching room schedule:", error);
         }
     }
 
+    function filterExpiredTemporarySchedules(data) {
+        const now = new Date();
+        const currentTimeMinutes = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
+
+        // Filter temporary schedules based on current time
+        const temporarySchedules = data.temporarySchedules.filter(schedule => {
+            const endMinutes = convertToMinutes(schedule.end_time);
+            return endMinutes > currentTimeMinutes; // Keep schedules that are still active
+        });
+
+        return {
+            ...data,
+            temporarySchedules,
+        };
+    }
+
     function populateWeeklyTable(response) {
         console.log("populateWeeklyTable invoked");
         const scheduleTableBody = $('#scheduleTableBody');
-        scheduleTableBody.empty(); // Clear any previous table content
+        scheduleTableBody.empty(); // Clear previous table content
     
         const timeslots = generateTimeSlots("07:30 AM", "09:00 PM", 30);
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     
         console.log("Generated timeslots:", timeslots);
     
-        timeslots.forEach((timeSlot) => {
+        const coveredCells = {};
+    
+        timeslots.forEach((timeSlot, rowIndex) => {
             const row = $('<tr>');
-            row.append(`<td>${timeSlot}</td>`); // Time column
+            row.append(`<td>${timeSlot}</td>`); // Add time column
     
-            days.forEach((day) => {
-                const cell = $('<td>');
-                const schedules = getSchedulesForTimeSlot(response, day, timeSlot);
+            days.forEach((day, dayIndex) => {
+                const cellKey = `${rowIndex}-${dayIndex}`;
     
-                console.log(`Checking time slot: ${timeSlot} for day: ${day}`);
-                console.log("Schedules to filter:", schedules);
-    
-                if (schedules.length > 0) {
-                    schedules.forEach((schedule) => {
-                        const scheduleDiv = $(`
-                            <div class="schedule-item ${schedule.type === 'temporary' ? 'temporary' : 'regular'}">
-                                <strong>${schedule.class_name} (${schedule.section})</strong><br>
-                                ${schedule.start_time} - ${schedule.end_time}<br>
-                                ${schedule.professor}
-                            </div>
-                        `);
-                        cell.append(scheduleDiv);
-                    });
-                } else {
-                    cell.append('<span class="text-muted">No Schedule</span>');
+                if (coveredCells[cellKey]) {
+                    console.log(`Skipping covered cell for ${day}, ${timeSlot}`);
+                    return;
                 }
     
-                row.append(cell);
+                console.log(`Processing Day: ${day}, Slot: ${timeSlot}`);
+                const schedules = getSchedulesForTimeSlot(response, day, timeSlot);
+                console.log(`Filtered schedules for ${day}, ${timeSlot}:`, schedules);
+    
+                if (schedules.length > 0) {
+                    const duration = calculateDuration(schedules[0].start_time, schedules[0].end_time, 30);
+                    for (let i = 0; i < duration; i++) {
+                        coveredCells[`${rowIndex + i}-${dayIndex}`] = true;
+                    }
+    
+                    // Generate content for both regular and temporary schedules
+                    let content = "";
+    
+                    schedules.forEach(schedule => {
+                        const scheduleClass = schedule.type === 'temporary' ? 'temporary-schedule' : 'regular-schedule';
+                        const overriddenLabel = schedule.overridden ? '<span class="badge bg-danger">Overridden</span>' : '';
+                        const tempLabel = schedule.type === 'temporary' ? '<span class="text-danger">(Temporary)</span>' : '';
+    
+                        content += `
+                            <div class="text-center ${scheduleClass} p-2 mb-2" style="border: 1px solid ${schedule.type === 'temporary' ? '#f5c6cb' : '#c3e6cb'}; border-radius: 5px;">
+                                <strong>${schedule.class_name || 'N/A'} (${schedule.section || 'N/A'})</strong><br>
+                                ${schedule.start_time} - ${schedule.end_time}<br>
+                                ${schedule.professor || 'No Professor Assigned'}<br>
+                                ${overriddenLabel} ${tempLabel}
+                            </div>
+                        `;
+                    });
+    
+                    const scheduleCell = $(`
+                        <td rowspan="${duration}">
+                            ${content}
+                        </td>
+                    `);
+    
+                    console.log("Appending merged cell for schedules:", scheduleCell.html());
+                    row.append(scheduleCell);
+                } else {
+                    row.append('<td><span class="text-muted">No Schedule</span></td>');
+                }
             });
     
             console.log("Appending row:", row.html());
@@ -132,58 +179,71 @@ $(document).ready(function () {
         const times = [];
         let current = new Date(`2000-01-01T${convertTo24HourFormat(startTime)}`);
         const end = new Date(`2000-01-01T${convertTo24HourFormat(endTime)}`);
-    
+
         while (current < end) {
             const next = new Date(current);
             next.setMinutes(current.getMinutes() + intervalMinutes);
-    
+
             const formatTime = (time) =>
                 time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-    
+
             times.push(`${formatTime(current)} - ${formatTime(next)}`);
             current = next;
         }
-    
+
+        console.log("Generated time slots:", times);
         return times;
     }
-    
+
     function convertToMinutes(time) {
-        const [hours, minutes, period] = time.match(/(\d+):(\d+)\s(AM|PM)/).slice(1);
-        let totalMinutes = parseInt(hours) % 12 * 60 + parseInt(minutes);
-        if (period === 'PM') totalMinutes += 12 * 60;
-        return totalMinutes;
+        const [hours, minutes, period] = time.match(/(\d+):(\d+)\s?(AM|PM)/).slice(1);
+        let hourInMinutes = parseInt(hours) % 12 * 60 + parseInt(minutes);
+        if (period === 'PM') hourInMinutes += 12 * 60;
+        return hourInMinutes;
     }
-    
+
     function convertTo24HourFormat(time) {
-        const [hours, minutes, period] = time.match(/(\d+):(\d+)\s(AM|PM)/).slice(1);
+        const [hours, minutes, period] = time.match(/(\d+):(\d+)\s?(AM|PM)/).slice(1);
         let hour24 = parseInt(hours) % 12;
         if (period === 'PM') hour24 += 12;
         return `${hour24.toString().padStart(2, '0')}:${minutes}`;
     }
-    
+
     function getSchedulesForTimeSlot(response, day, timeSlot) {
         const [slotStart, slotEnd] = timeSlot.split(' - ');
         const slotStartMinutes = convertToMinutes(slotStart);
         const slotEndMinutes = convertToMinutes(slotEnd);
-    
-        // Combine both regular and temporary schedules
+
         const schedules = [...response.regularSchedules, ...response.temporarySchedules];
-    
-        return schedules.filter(schedule => {
+
+        console.log(`Processing Day: ${day}, Slot: ${timeSlot}`);
+        console.log(`Slot Start Minutes: ${slotStartMinutes}, Slot End Minutes: ${slotEndMinutes}`);
+
+        const matchingSchedules = schedules.filter(schedule => {
             const scheduleStartMinutes = convertToMinutes(schedule.start_time);
             const scheduleEndMinutes = convertToMinutes(schedule.end_time);
-            const scheduleDay = schedule.day || ""; // Ensure day exists
-    
-            // Check if the schedule matches the current day and overlaps with the time slot
-            const isDayMatch = scheduleDay.toLowerCase() === day.toLowerCase();
+            const scheduleDay = schedule.day || "";
+
+            const normalizedScheduleDay = scheduleDay.trim().toLowerCase();
+            const normalizedSlotDay = day.trim().toLowerCase();
+
+            const isDayMatch = normalizedScheduleDay === normalizedSlotDay;
             const isTimeOverlap =
-                (scheduleStartMinutes < slotEndMinutes && scheduleEndMinutes > slotStartMinutes);
-    
+                scheduleStartMinutes < slotEndMinutes && scheduleEndMinutes > slotStartMinutes;
+
             return isDayMatch && isTimeOverlap;
         });
+
+        console.log(`Matching schedules for ${day}, ${timeSlot}:`, matchingSchedules);
+        return matchingSchedules;
     }
-    
-    
+
+    function calculateDuration(startTime, endTime, slotMinutes) {
+        const startMinutes = convertToMinutes(startTime);
+        const endMinutes = convertToMinutes(endTime);
+        return Math.ceil((endMinutes - startMinutes) / slotMinutes);
+    }
+
     // Remove expired schedules
     function removeExpiredSchedules() {
         const now = new Date();

@@ -24,10 +24,7 @@
             <span class="text-danger fw-bold">Red</span> = Occupied,
             <span class="text-success fw-bold">Green</span> = Unoccupied
         </p>
-        <p class="text-muted text-center">
-            <strong>Note:</strong> Schedules marked as <span class="text-danger">"Overridden"</span> indicate that a temporary schedule is currently in effect, replacing the regular schedule for the specified time.
-        </p>
-
+       
 <!-- Room Buttons -->
 <div id="rooms-container" class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-3 justify-content-center">
     {% for room in rooms %}
@@ -45,16 +42,29 @@
 </div>
 
 <!-- Modals -->
-<div class="modal fade" id="roomModal" tabindex="-1" aria-labelledby="roomModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
+<div class="modal fade" id="roomModal" tabindex="-1" role="dialog" aria-labelledby="roomModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="roomModalLabel">Weekly Schedule for <span id="roomName"></span></h5>
+                <div class="legend">
+                    <p class="text-muted text-center mb-1">
+                        <strong style="margin-left: 50px;">Note:</strong> Schedules marked as <span class="text-danger">"Overridden"</span> indicate that a temporary schedule is currently in effect, replacing the regular schedule for the specified time.
+                    </p>
+                    <p class="text-center mb-0">
+                        <span class="text-success fw-bold">Green</span> = Regular Schedule.
+                        <span class="text-danger fw-bold">Red</span> = Temporary Schedule.
+                        <span class="badge badge-danger">Overridden</span> = Regular schedule overridden by a temporary schedule.
+                    </p>
+                </div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <div class="modal-body" style="max-height: 600px; overflow-y: auto;">
                 <!-- Responsive Table -->
                 <div class="table-responsive">
-                    <table class="table table-bordered text-center" id="scheduleTableBody">
+                    <table class="table table-bordered text-center" id="scheduleTable">
                         <thead class="table-light">
                             <tr>
                                 <th>Time</th>
@@ -66,18 +76,19 @@
                                 <th>Saturday</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="scheduleTableBody">
                             <!-- Rows will be dynamically populated -->
                         </tbody>
                     </table>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
+
 
 
 <!-- CSS and JS -->

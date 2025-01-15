@@ -23,6 +23,8 @@ urlpatterns = [
     path('api/room-schedule/<int:room_id>/', views.room_schedule_api, name='room_schedule_api'),
     path('api/get-rooms/', views.get_rooms, name='get_rooms'),
     path('upload-classroom-csv/', views.upload_csv_classroom, name='upload_classroom_csv'),
+    path('confirm-csv-upload-classroom/', views.confirm_csv_upload_classroom, name='confirm_csv_upload_classroom'),
+
 ]
 
 if settings.DEBUG:  # Only serve media files in development
