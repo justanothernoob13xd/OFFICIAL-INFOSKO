@@ -30,8 +30,7 @@ DEBUG = False
 ALLOWED_HOSTS = [
     '143.198.192.156',
     '127.0.0.1',
-   'infosko.blog',
-   'wwww.infosko.blog',
+    'infosko.onrender.com'
 ]
 
 
@@ -138,6 +137,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
