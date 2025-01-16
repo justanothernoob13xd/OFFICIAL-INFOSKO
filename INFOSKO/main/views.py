@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import JsonResponse
+from django.utils import timezone
 from django.utils.timezone import localtime
 from datetime import datetime
 from django.core.exceptions import ValidationError
@@ -10,7 +11,7 @@ from rest_framework import viewsets
 from rest_framework.generics import ListAPIView
 from .pagination import PersonnelPagination
 import csv
-from .models import Personnel, Item, Room, RoomSchedule, Logs
+from .models import Personnel, Item, Room, RoomSchedule, Logs, RoomScheduleLogs
 from .serializers import PersonnelSerializer, ItemSerializer
 import logging
 
@@ -61,19 +62,14 @@ def get_rooms(request):
     except Exception as e:
         return JsonResponse({'error': f'Error fetching rooms: {str(e)}'}, status=500)
 
-
 # API to get room schedule
 def room_schedule_api(request, room_id):
     try:
         logger.info(f"Fetching schedule for room ID: {room_id}")
         room = get_object_or_404(Room, id=room_id)
 
-        days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-
-        # Fetch schedules for the whole week
+        # Fetch schedules for the room
         schedules = RoomSchedule.objects.filter(room=room).order_by('day', 'start_time')
-
-        logger.info(f"Schedules fetched: {[schedule for schedule in schedules]}")
 
         regular_schedules = []
         temporary_schedules = []
@@ -85,16 +81,16 @@ def room_schedule_api(request, room_id):
                 'professor': schedule.professor_name,
                 'start_time': schedule.start_time.strftime('%I:%M %p'),
                 'end_time': schedule.end_time.strftime('%I:%M %p'),
-                'day': schedule.day,  # Use the `day` field directly
+                'day': schedule.day,
+                'type': schedule.schedule_type,  # Added 'type' field for clarity in JS
+                'overridden': False,  # Default to not overridden
             }
-
-            logger.info(f"Processing schedule: {schedule_data}")
 
             if schedule.schedule_type == 'regular':
                 # Check if this schedule is overridden by any temporary schedule
                 schedule_data['overridden'] = any(
-                    temp_schedule.start_time <= schedule.end_time and
-                    temp_schedule.end_time >= schedule.start_time and
+                    temp_schedule.start_time < schedule.end_time and
+                    temp_schedule.end_time > schedule.start_time and
                     temp_schedule.day == schedule.day
                     for temp_schedule in schedules.filter(schedule_type='temporary')
                 )
@@ -102,9 +98,7 @@ def room_schedule_api(request, room_id):
             elif schedule.schedule_type == 'temporary':
                 temporary_schedules.append(schedule_data)
 
-        logger.info(f"Regular schedules: {regular_schedules}")
-        logger.info(f"Temporary schedules: {temporary_schedules}")
-
+        # Combine regular and temporary schedules in the response
         response_data = {
             'room_name': room.number,
             'regularSchedules': regular_schedules,
@@ -118,23 +112,24 @@ def room_schedule_api(request, room_id):
         return JsonResponse({'error': f"Error fetching schedule: {str(e)}"}, status=500)
 
 
+
 # Function to clean up expired temporary schedules
 def cleanup_expired_temporary_schedules():
-    try:
-        now_time = localtime().time()
-        now_date = localtime().date()
-        expired_schedules = RoomSchedule.objects.filter(
-            schedule_type="temporary"
-        ).filter(
-            Q(date__lt=now_date) |
-            Q(date=now_date, end_time__lt=now_time)
+    now_time = localtime().time()
+    now_day = localtime().strftime('%A')
+    expired_schedules = RoomSchedule.objects.filter(
+        schedule_type="temporary",
+        end_time__lt=now_time,
+        day=now_day
+    )
+    for schedule in expired_schedules:
+        RoomScheduleLogs.objects.create(
+            action="Deleted Expired Temporary Schedule",
+            room_name=schedule.room.number,
+            schedule_type=schedule.schedule_type,
         )
-        deleted_count, _ = expired_schedules.delete()
-
-        logger.info(f"Cleaned up {deleted_count} expired temporary schedules.")
-    except Exception as e:
-        logger.exception(f"Error while cleaning up expired temporary schedules: {e}")
-
+    deleted_count, _ = expired_schedules.delete()
+    return f"Deleted {deleted_count} expired temporary schedules"
 
 #csv functionality for classroom
 logger = logging.getLogger(__name__)
@@ -231,7 +226,7 @@ def confirm_csv_upload_classroom(request):
                     end_time = row.get('end_time')
                     if not start_time or not end_time:
                         raise ValidationError("Start Time and End Time fields must not be empty.")
-                    
+
                     parsed_start_time = parse_time(start_time)
                     parsed_end_time = parse_time(end_time)
 
@@ -250,8 +245,26 @@ def confirm_csv_upload_classroom(request):
                     ]:
                         raise ValidationError(f"Day '{day}' is invalid. Please use proper day names (e.g., 'Monday').")
 
-                    # Save to database
-                    RoomSchedule.objects.update_or_create(
+                    # Check if a schedule already exists in the same time slot
+                    existing_schedules = RoomSchedule.objects.filter(
+                        room=room,
+                        day=day.capitalize(),
+                        start_time=parsed_start_time,
+                        end_time=parsed_end_time
+                    )
+
+                    for schedule in existing_schedules:
+                        # Log deletion for the existing schedule
+                        RoomScheduleLogs.objects.create(
+                            action="Deleted existing schedule",
+                            room_name=schedule.room.number,
+                            schedule_type=schedule.schedule_type,
+                            timestamp=timezone.now(),
+                        )
+                        schedule.delete()  # Delete the schedule being overridden
+
+                    # Save the new schedule
+                    schedule, created = RoomSchedule.objects.update_or_create(
                         room=room,
                         day=day.capitalize(),
                         start_time=parsed_start_time,
@@ -262,6 +275,15 @@ def confirm_csv_upload_classroom(request):
                             'subject_name': row.get('class_name', '').strip(),
                             'section_name': row.get('section_name', '').strip(),
                         }
+                    )
+
+                    # Log the new or updated schedule
+                    action = "Created" if created else "Updated"
+                    RoomScheduleLogs.objects.create(
+                        action=f"{action} schedule",
+                        room_name=schedule.room.number,
+                        schedule_type=schedule.schedule_type,
+                        timestamp=timezone.now()
                     )
 
                 messages.success(request, "All classroom schedules imported successfully!")
@@ -285,6 +307,31 @@ def confirm_csv_upload_classroom(request):
         'preview_data': preview_data,
         'warnings': warnings
     })
+
+
+#Logs For classroom
+def view_room_logs(request):
+    """View logs of room schedule actions."""
+    logs = RoomScheduleLogs.objects.all().order_by('-timestamp')
+    log_data = [
+        {
+            'id': log.id,
+            'action_type': log.action,
+            'room_name': log.room_name,
+            'schedule_type': log.schedule_type,
+            'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        for log in logs
+    ]
+    return JsonResponse({'logs': log_data})
+
+def archive_room_logs(request):
+    """Archive room schedule logs older than a certain date."""
+    threshold_date = timezone.now() - timezone.timedelta(days=30)  # Archive logs older than 30 days
+    old_logs = RoomScheduleLogs.objects.filter(timestamp__lt=threshold_date)
+    archived_count = old_logs.count()
+    old_logs.delete()
+    return JsonResponse({'message': f'{archived_count} room schedule logs archived successfully'})
 
 #personnel/faculties
 def faculties(request):
@@ -421,6 +468,8 @@ def delete_personnel(request, personnel_id):
         })
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+#logs for personnel 
 
 def view_logs(request):
     """View logs of personnel actions."""

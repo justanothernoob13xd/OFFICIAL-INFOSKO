@@ -7,7 +7,7 @@ from django.db import IntegrityError
 from django.db import IntegrityError, transaction
 import csv
 from .forms import UploadCSVForm
-from .models import Personnel, Room, RoomSchedule, Logs, Semester
+from .models import Personnel, Room, RoomSchedule, Logs, Semester, RoomScheduleLogs
 from django.core.exceptions import ValidationError
 from django.utils.timezone import localtime
 from datetime import datetime
@@ -202,6 +202,13 @@ class PersonnelAdmin(admin.ModelAdmin):
                 messages.error(request, f"An error occurred: {e}")
 
         return render(request, "admin/personnel_preview_csv.html", {'csv_data': csv_data})
+    
+#Room Admin
+class RoomScheduleLogsAdmin(admin.ModelAdmin):
+    list_display = ('action', 'room_name', 'timestamp')  # Adjust fields as per your model
+    list_filter = ('action', 'timestamp')
+    search_fields = ('room_name',)
+
 
 # Logs Admin
 @admin.register(Logs)
@@ -213,5 +220,6 @@ class LogsAdmin(admin.ModelAdmin):
 # Register Models in Admin
 admin.site.register(Personnel, PersonnelAdmin)
 admin.site.register(Room, RoomAdmin)
-admin.site.register(RoomSchedule, RoomScheduleAdmin,)
+admin.site.register(RoomSchedule, RoomScheduleAdmin)
+admin.site.register(RoomScheduleLogs, RoomScheduleLogsAdmin)  # Fix this line
 admin.site.register(Semester, SemesterAdmin)

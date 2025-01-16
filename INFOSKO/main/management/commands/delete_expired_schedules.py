@@ -1,15 +1,24 @@
-# cleanup/management/commands/cleanup_temporary_schedules.py
-from django.core.management.base import BaseCommand
-from main.models import RoomSchedule
+from django.db.models import Q
+from django.utils.timezone import localtime
 
-class Command(BaseCommand):
-    help = 'Cleanup expired temporary schedules'
+# Function to clean up expired temporary schedules
+def cleanup_expired_temporary_schedules():
+    try:
+        # Get the current time and day
+        now_time = localtime().time()
+        now_day = localtime().strftime('%A')  # Get the current day as a string (e.g., 'Monday')
 
-    def handle(self, *args, **kwargs):
-        expired_schedules = RoomSchedule.objects.filter(schedule_type='temporary').filter(
-            end_time__lte=localtime().time(),
-            date__lte=localtime().date(),
+        # Find expired temporary schedules for the current day and past times
+        expired_schedules = RoomSchedule.objects.filter(
+            schedule_type="temporary",
+            day=now_day,
+            end_time__lte=now_time  # End time is in the past
         )
-        count = expired_schedules.count()
-        expired_schedules.delete()
-        self.stdout.write(f"Deleted {count} expired temporary schedules.")
+
+        # Count and delete the expired schedules
+        deleted_count, _ = expired_schedules.delete()
+
+        # Log the result
+        logger.info(f"Cleaned up {deleted_count} expired temporary schedules.")
+    except Exception as e:
+        logger.exception(f"Error while cleaning up expired temporary schedules: {e}")

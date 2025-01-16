@@ -143,7 +143,7 @@ $(document).ready(function () {
                         const scheduleClass = schedule.type === 'temporary' ? 'temporary-schedule' : 'regular-schedule';
                         const overriddenLabel = schedule.overridden ? '<span class="badge bg-danger">Overridden</span>' : '';
                         const tempLabel = schedule.type === 'temporary' ? '<span class="text-danger">(Temporary)</span>' : '';
-    
+                    
                         content += `
                             <div class="text-center ${scheduleClass} p-2 mb-2" style="border: 1px solid ${schedule.type === 'temporary' ? '#f5c6cb' : '#c3e6cb'}; border-radius: 5px;">
                                 <strong>${schedule.class_name || 'N/A'} (${schedule.section || 'N/A'})</strong><br>
@@ -153,7 +153,7 @@ $(document).ready(function () {
                             </div>
                         `;
                     });
-    
+                    
                     const scheduleCell = $(`
                         <td rowspan="${duration}">
                             ${content}
@@ -213,30 +213,32 @@ $(document).ready(function () {
         const [slotStart, slotEnd] = timeSlot.split(' - ');
         const slotStartMinutes = convertToMinutes(slotStart);
         const slotEndMinutes = convertToMinutes(slotEnd);
-
+    
         const schedules = [...response.regularSchedules, ...response.temporarySchedules];
-
+    
         console.log(`Processing Day: ${day}, Slot: ${timeSlot}`);
         console.log(`Slot Start Minutes: ${slotStartMinutes}, Slot End Minutes: ${slotEndMinutes}`);
-
+    
         const matchingSchedules = schedules.filter(schedule => {
             const scheduleStartMinutes = convertToMinutes(schedule.start_time);
             const scheduleEndMinutes = convertToMinutes(schedule.end_time);
             const scheduleDay = schedule.day || "";
-
+    
             const normalizedScheduleDay = scheduleDay.trim().toLowerCase();
             const normalizedSlotDay = day.trim().toLowerCase();
-
+    
             const isDayMatch = normalizedScheduleDay === normalizedSlotDay;
             const isTimeOverlap =
                 scheduleStartMinutes < slotEndMinutes && scheduleEndMinutes > slotStartMinutes;
-
+    
+            // Always include temporary schedules, even if they overlap partially
             return isDayMatch && isTimeOverlap;
         });
-
+    
         console.log(`Matching schedules for ${day}, ${timeSlot}:`, matchingSchedules);
         return matchingSchedules;
     }
+    
 
     function calculateDuration(startTime, endTime, slotMinutes) {
         const startMinutes = convertToMinutes(startTime);
@@ -244,15 +246,18 @@ $(document).ready(function () {
         return Math.ceil((endMinutes - startMinutes) / slotMinutes);
     }
 
-    // Remove expired schedules
-    function removeExpiredSchedules() {
-        const now = new Date();
-        $('.schedule-item').each(function () {
-            const endTime = new Date($(this).data('end-time')); // Assuming you store end time as a data attribute
-            if (endTime < now) {
-                $(this).remove();
-            }
-        });
-    }
-    setInterval(removeExpiredSchedules, 1000); // Check every second
+// Remove expired schedules
+function removeExpiredSchedules() {
+    const now = new Date();
+    $('.schedule-item').each(function () {
+        const endTime = new Date($(this).data('end-time')); // Assuming you store end time as a data attribute
+        if (endTime < now) {
+            $(this).remove();
+        }
+    });
+}
+
+// Run cleanup every 1 minute
+setInterval(removeExpiredSchedules, 1 * 60 * 1000); // Check every 1 minute
+
 });

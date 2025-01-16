@@ -92,15 +92,22 @@ class RoomSchedule(models.Model):
             )
         ]
 
-    class Command(BaseCommand):
-        help = "Clean up expired temporary schedules"
+class Command(BaseCommand):
+    help = "Clean up expired temporary schedules"
 
     def handle(self, *args, **kwargs):
         now = localtime()
+        current_day = now.strftime('%A')  # Get the current day (e.g., 'Monday')
+        current_time = now.time()         # Get the current time
+
+        # Find expired temporary schedules based on day and time
         expired_schedules = RoomSchedule.objects.filter(
             schedule_type='temporary',
-            date__lt=now.date()
+            day=current_day,  # Filter schedules for the current day
+            end_time__lte=current_time  # End time is less than or equal to the current time
         )
+
+        # Delete expired schedules and log the result
         deleted_count, _ = expired_schedules.delete()
         self.stdout.write(f"Deleted {deleted_count} expired temporary schedules.")
 
@@ -120,6 +127,34 @@ class Semester(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.start_date} to {self.end_date})"
+    
+#Logs for Classroom and Schedule
+class RoomScheduleLogs(models.Model):
+    action = models.CharField(max_length=50)  # e.g., "Added Temporary Schedule", "Deleted Regular Schedule"
+    room_name = models.CharField(max_length=255)  # Room involved
+    schedule_type = models.CharField(max_length=10, choices=[('regular', 'Regular'), ('temporary', 'Temporary')])
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "Room Schedule Logs"
+
+    @staticmethod
+    def delete_old_logs(days=30):
+        cutoff_date = now() - timedelta(days=days)
+        deleted_count, _ = RoomScheduleLogs.objects.filter(timestamp__lt=cutoff_date).delete()
+        print(f"Deleted {deleted_count} old log(s) older than {days} days.")
+
+    def __str__(self):
+        return f"{self.action} - {self.room_name} ({self.schedule_type}) - {self.timestamp}"
+class ArchivedRoomScheduleLogs(models.Model):
+    action = models.CharField(max_length=50)
+    room_name = models.CharField(max_length=255)
+    schedule_type = models.CharField(max_length=10, choices=[('regular', 'Regular'), ('temporary', 'Temporary')])
+    timestamp = models.DateTimeField()  # Original log timestamp
+    archived_on = models.DateTimeField(auto_now_add=True)  # When it was archived
+
+    def __str__(self):
+        return f"Archived: {self.action} - {self.room_name} ({self.schedule_type}) - {self.archived_on}"
 
 # Model for Faculties
 class Personnel(models.Model):
@@ -165,7 +200,7 @@ class Item(models.Model):
     def __str__(self):
         return self.name
 
-# Model for Automated Logs
+# Model for Automated Logs Personnel
 class Logs(models.Model):
     action = models.CharField(max_length=50)
     personnel_name = models.CharField(max_length=255)
