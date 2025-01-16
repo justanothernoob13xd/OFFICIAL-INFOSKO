@@ -28,6 +28,7 @@ SECRET_KEY = 'django-insecure-pls+37t)#8+y605=x$-1zaf+2ro$@xwx4v#kq4#1du#&m#fva4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 ALLOWED_HOSTS = [
     'official-infosko.onrender.com', 'localhost', '127.0.0.1'
 ]
