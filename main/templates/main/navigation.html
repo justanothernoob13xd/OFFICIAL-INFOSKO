@@ -1,0 +1,30 @@
+{% extends "main/index.html" %}
+
+{% load static %}
+
+{% block title %}Navigation{% endblock %}
+
+{% block content %}
+ <!--NAVBAR-->
+<nav class="navbar navbar-expand-lg navbar-custom  justify-content-between">
+    <div class="back-button mb-3 mt-2">
+    <a href="{% url 'index' %}" class="btn btn-warning btn-lg">Back</a>
+</div>
+    <a class="navbar-brand">FLOOR PLANS</a>
+    <a class="nav-link" href="{% url 'navigation' %}">1ST FLOOR</a>
+    <a class="nav-link" href="{% url 'secfloor' %}">2ND FLOOR</a>
+    <a class="nav-link" href="{% url 'thrdfloor' %}">3RD FLOOR</a>
+    <a class="nav-link" href="{% url 'fourthfloor' %}">4TH FLOOR</a>
+</nav>
+
+<div class="container mt-5">
+    <div class="floor-plan" id="floorPlan">
+        <img src="{% static 'images/1stfloor.jpg' %}" alt="Floor Plan">
+    </div>
+</div>
+
+<!--Script-->
+<script>
+    var redirectUrl = "{% url 'index' %}";
+</script>
+{% endblock %}

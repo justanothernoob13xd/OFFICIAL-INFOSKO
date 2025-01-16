@@ -1,0 +1,49 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Upload CSV File</h1>
+
+    <!-- Display Feedback Messages -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+  <!-- CSV Upload Form -->
+<form method="POST" enctype="multipart/form-data" id="upload-form" action="{% url 'upload_csv' %}">
+    {% csrf_token %}
+    <div class="col-12">
+        <label for="csvFile" class="form-label">Select CSV File</label>
+        <input type="file" name="csv_file" id="csvFile" class="form-control" accept=".csv" required>
+    </div>
+    <div class="col-12 mt-3">
+        <button type="submit" class="btn btn-primary">Upload CSV</button>
+    </div>
+</form>
+
+<!-- Preview Container -->
+<div id="preview-container" class="mt-4" style="display:none;">
+    <h3>CSV Preview</h3>
+    <table class="table table-bordered" id="preview-table">
+        <thead>
+            <tr id="preview-header">
+                <!-- Header row will be inserted dynamically -->
+            </tr>
+        </thead>
+        <tbody id="preview-body">
+            <!-- Preview data rows will be inserted dynamically -->
+        </tbody>
+    </table>
+    <button id="confirm-upload-btn" class="btn btn-success mt-3" style="display:none;">Confirm and Upload</button>
+</div>
+
+<script src="{% static 'js/custom_admin.js' %}"></script>
+{% endblock %}
