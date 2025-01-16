@@ -166,3 +166,6 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute='*/1'),  # Runs every minute for testing
     },
 }
+
+print("INSTALLED_APPS:", INSTALLED_APPS)
+print("PYTHONPATH:", os.environ.get("PYTHONPATH"))
