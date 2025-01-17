@@ -2,7 +2,7 @@
 FROM python:3.12.4
 
 # Set the working directory in the container
-WORKDIR /app
+WORKDIR /INFOSKOProject
 
 # Copy the project files into the container
 COPY . .
@@ -14,13 +14,16 @@ RUN apt-get update && apt-get install -y \
 
 # Install Python dependencies
 RUN pip install --upgrade pip
-RUN pip install -r INFOSKOProject/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Run Django collectstatic
-RUN python INFOSKOProject/manage.py collectstatic --noinput
+RUN python manage.py collectstatic --noinput
 
 # Expose the port for the app
 EXPOSE 8000
+
+# Define environment variables
+ENV DJANGO_SETTINGS_MODULE=INFOSKOProject.infosko.settings
 
 # Run the application
 CMD ["gunicorn", "INFOSKOProject.infosko.wsgi:application", "--bind", "0.0.0.0:8000"]
