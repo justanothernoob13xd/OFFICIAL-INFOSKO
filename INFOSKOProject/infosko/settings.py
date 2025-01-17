@@ -167,5 +167,3 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-print("INSTALLED_APPS:", INSTALLED_APPS)
-print("PYTHONPATH:", os.environ.get("PYTHONPATH"))
