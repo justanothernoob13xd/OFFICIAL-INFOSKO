@@ -63,7 +63,11 @@ MIDDLEWARE = [
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
-CORS_ALLOW_ALL_ORIGINS = True  # Enable for development (relax this for production with specific origins)
+CORS_ALLOW_ALL_ORIGINS = False  # Enable for development (relax this for production with specific origins)
+
+CORS_ALLOWED_ORIGINS = [
+    "https://official-infosko.onrender.com",
+]
 
 ROOT_URLCONF = 'infosko.urls'
 
