@@ -26,12 +26,14 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'fallback-secret-key')
 SECRET_KEY = 'django-insecure-pls+37t)#8+y605=x$-1zaf+2ro$@xwx4v#kq4#1du#&m#fva4'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
-ALLOWED_HOSTS = [
-    'official-infosko.onrender.com', 'localhost', '127.0.0.1'
+DEBUG = False  # Ensure DEBUG is set to False in production
+ALLOWED_HOSTS = [' https://official-infosko.onrender.com']
+CORS_ALLOW_ALL_ORIGINS = False  # Restrict for production
+CORS_ALLOWED_ORIGINS = [
+    "https://official-infosko.onrender.com",  # Your Render domain
 ]
+
 
 
 # Application definition
