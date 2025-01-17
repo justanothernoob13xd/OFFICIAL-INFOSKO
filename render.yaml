@@ -3,5 +3,6 @@ services:
     name: infosko
     env: python
     plan: free
+    buildCommand: ""
     startCommand: gunicorn INFOSKOProject.infosko.wsgi:application --bind 0.0.0.0:8000
     dockerfilePath: ./Dockerfile
