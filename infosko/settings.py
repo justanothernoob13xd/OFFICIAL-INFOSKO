@@ -52,6 +52,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -59,12 +60,14 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
+
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
-CORS_ALLOW_ALL_ORIGINS = True  # Enable for development (relax this for production with specific origins)
+CORS_ALLOWED_ORIGINS = [
+    "https://official-infosko.onrender.com",
+]
 
 ROOT_URLCONF = 'infosko.urls'
 
@@ -139,8 +142,6 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
-# Enable Gzip and file compression (optional, but recommended)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
@@ -153,7 +154,6 @@ DEBUG = True
 #CELERY
 # Redis settings
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
-
 CELERY_BROKER_URL = os.getenv('REDIS_URL')
 CELERY_RESULT_BACKEND = os.getenv('REDIS_URL')
 

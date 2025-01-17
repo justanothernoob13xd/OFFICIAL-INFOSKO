@@ -2,10 +2,10 @@
 FROM python:3.12.4
 
 # Set the working directory in the container
-WORKDIR /INFOSKOProject
+WORKDIR /app
 
 # Copy the project files into the container
-COPY . .
+COPY . /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -14,10 +14,10 @@ RUN apt-get update && apt-get install -y \
 
 # Install Python dependencies
 RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Run Django collectstatic
-RUN python manage.py collectstatic --noinput
+RUN python /app/manage.py collectstatic --noinput
 
 # Expose the port for the app
 EXPOSE 8000
