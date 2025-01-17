@@ -23,7 +23,7 @@ RUN python /app/manage.py collectstatic --noinput
 EXPOSE 8000
 
 # Define environment variables
-ENV DJANGO_SETTINGS_MODULE=INFOSKOProject.settings
+ENV DJANGO_SETTINGS_MODULE=INFOSKOProject.infosko.settings
 
 # Run the application
 CMD ["gunicorn", "INFOSKOProject.infosko.wsgi:application", "--bind", "0.0.0.0:8000"]
