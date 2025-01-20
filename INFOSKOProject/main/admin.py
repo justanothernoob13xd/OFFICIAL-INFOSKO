@@ -205,9 +205,9 @@ class PersonnelAdmin(admin.ModelAdmin):
     
 #Room Admin
 class RoomScheduleLogsAdmin(admin.ModelAdmin):
-    list_display = ('action', 'room_name', 'timestamp')  # Adjust fields as per your model
-    list_filter = ('action', 'timestamp')
-    search_fields = ('room_name',)
+    list_display = ('action', 'room_name', 'schedule_type', 'timestamp')
+    list_filter = ('action', 'schedule_type', 'timestamp')
+    search_fields = ('room_name', 'action')
 
 
 # Logs Admin
