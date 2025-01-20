@@ -30,8 +30,16 @@ DEBUG = False
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 ALLOWED_HOSTS = [
-    'official-infosko.onrender.com', 'localhost', '127.0.0.1'
+    'official-infosko.onrender.com', 
+    'localhost', 
+    '127.0.0.1',
 ]
+
+#ALLOWED IPs
+ALLOWED_IPS = [
+    '127.0.0.1', '::1',
+    '192.168.1.49'
+    ]  
 
 
 # Application definition
@@ -48,17 +56,20 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_celery_results',
     'django_celery_beat',
+    'axes',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Add here (directly after SecurityMiddleware)
+    'whitenoise.middleware.WhiteNoiseMiddleware', 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'axes.middleware.AxesMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'infosko.middleware.AllowIPMiddleware',
 ]
 
 
@@ -86,6 +97,20 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'infosko.wsgi.application'
 
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',  # Add this for Axes
+    'django.contrib.auth.backends.ModelBackend',  # Default Django backend
+]
+
+#AXES CONFIG
+AXES_FAILURE_LIMIT = 5  # Lockout after 5 failed attempts
+AXES_COOLOFF_TIME = 1  # Lockout duration in hours
+
+#Secure Cookies
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
@@ -170,3 +195,25 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
+#Render Logs
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://sys.stdout',  # Send logs to Render's dashboard
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',  # Adjust level as needed (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
