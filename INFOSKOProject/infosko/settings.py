@@ -35,15 +35,6 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
 ]
 
-# ALLOWED IPs
-ALLOWED_IPS = [
-    '127.0.0.1',  
-    '::1',        
-    '192.168.1.49'  
-]
-
-
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -67,7 +58,6 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'infosko.middleware.AllowIPMiddleware', 
     'axes.middleware.AxesMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
