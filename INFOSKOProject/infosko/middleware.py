@@ -6,6 +6,7 @@ class AllowIPMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Use 'self' to call the class method
         ip = self.get_client_ip(request)
         if ip not in settings.ALLOWED_IPS:
             return HttpResponseForbidden("Forbidden")
