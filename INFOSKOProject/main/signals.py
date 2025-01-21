@@ -4,27 +4,6 @@ from django.utils import timezone
 from django.utils.timezone import now
 from .models import Personnel, Logs, RoomSchedule, RoomScheduleLogs
 
-#Classroom Signals
-# Signal for logging schedule creation or updates
-@receiver(post_save, sender=RoomSchedule)
-def log_room_schedule_save(sender, instance, created, **kwargs):
-    action = "Created" if created else "Updated"
-    RoomScheduleLogs.objects.create(
-        action=f"{action} schedule",
-        room_name=instance.room.number,
-        schedule_type=instance.schedule_type,
-        timestamp=now()
-    )
-
-# Signal for logging schedule deletion
-@receiver(post_delete, sender=RoomSchedule)
-def log_room_schedule_delete(sender, instance, **kwargs):
-    RoomScheduleLogs.objects.create(
-        action="Deleted schedule",
-        room_name=instance.room.number,
-        schedule_type=instance.schedule_type,
-        timestamp=now()
-    )
 
 #Personnel signals
 @receiver(post_save, sender=Personnel)
