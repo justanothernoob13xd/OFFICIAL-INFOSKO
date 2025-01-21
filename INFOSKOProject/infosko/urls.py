@@ -25,7 +25,7 @@ router = DefaultRouter()
 router.register(r'items', ItemViewSet, basename='item')
 
 urlpatterns = [
-    path('adminPOGIONLY/', admin.site.urls),
+    path('adminforINFOSKOonly/', admin.site.urls),
     path('', include('main.urls')),
     path('api/', include(router.urls)), 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -26,15 +26,14 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'fallback-secret-key')
 SECRET_KEY = 'django-insecure-pls+37t)#8+y605=x$-1zaf+2ro$@xwx4v#kq4#1du#&m#fva4'
 
 # SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = False
 
-DEBUG = False  # Ensure DEBUG is set to False in production
-ALLOWED_HOSTS = [' https://official-infosko.onrender.com']
-CORS_ALLOW_ALL_ORIGINS = False  # Restrict for production
-CORS_ALLOWED_ORIGINS = [
-    "https://official-infosko.onrender.com",  # Your Render domain
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = [
+    'official-infosko.onrender.com', 
+    'localhost', 
+    '127.0.0.1',
 ]
-
-
 
 # Application definition
 
@@ -50,27 +49,26 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_celery_results',
     'django_celery_beat',
+    'axes',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'axes.middleware.AxesMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
 ]
+
 
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = [
-    "https://official-infosko.onrender.com",
-]
+CORS_ALLOW_ALL_ORIGINS = True  # Enable for development (relax this for production with specific origins)
 
 ROOT_URLCONF = 'infosko.urls'
 
@@ -92,6 +90,20 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'infosko.wsgi.application'
 
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',  # Add this for Axes
+    'django.contrib.auth.backends.ModelBackend',  # Default Django backend
+]
+
+#AXES CONFIG
+AXES_FAILURE_LIMIT = 5  # Lockout after 5 failed attempts
+AXES_COOLOFF_TIME = 1  # Lockout duration in hours
+
+#Secure Cookies
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
@@ -143,9 +155,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Optional: Source static files
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Where static files will be collected
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -157,6 +170,7 @@ DEBUG = True
 #CELERY
 # Redis settings
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
+
 CELERY_BROKER_URL = os.getenv('REDIS_URL')
 CELERY_RESULT_BACKEND = os.getenv('REDIS_URL')
 
@@ -174,5 +188,25 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-print("INSTALLED_APPS:", INSTALLED_APPS)
-print("PYTHONPATH:", os.environ.get("PYTHONPATH"))
+#Render Logs
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://sys.stdout',  # Send logs to Render's dashboard
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',  # Adjust level as needed (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
