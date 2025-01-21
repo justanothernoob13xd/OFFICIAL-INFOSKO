@@ -16,6 +16,7 @@ urlpatterns = [
     path('secfloor/', secfloor, name='secfloor'),
     path('thrdfloor/', thrdfloor, name='thrdfloor'),
     path('fourthfloor/', fourthfloor, name='fourthfloor'),
+    path('api/', include('motion.urls')),  # Now the endpoint will be accessible at /api/motion/
     path('api/', include(router.urls)),
     path('api/personnel-list/', personnel_list, name='personnel-list'),
     path('api/personnel-suggestions/', personnel_suggestions, name='personnel-suggestions'),

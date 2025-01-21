@@ -21,7 +21,7 @@ $(document).ready(function () {
                 data.rooms.forEach(room => {
                     const button = $(`
                         <div class="col">
-                            <button class="btn w-100 room-button btn-secondary" 
+                            <button class="btn w-100 room-button btn-primary" 
                                     data-room-id="${room.id}" 
                                     data-room-name="${room.name}">
                                 ${room.name}
