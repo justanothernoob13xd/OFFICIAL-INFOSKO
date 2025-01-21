@@ -204,7 +204,10 @@ class PersonnelAdmin(admin.ModelAdmin):
         return render(request, "admin/personnel_preview_csv.html", {'csv_data': csv_data})
     
 #Room Admin
-
+class RoomScheduleLogsAdmin(admin.ModelAdmin):
+    list_display = ('action', 'room_name', 'schedule_type', 'timestamp')
+    list_filter = ('action', 'schedule_type', 'timestamp')
+    search_fields = ('room_name', 'action')
 
 
 # Logs Admin
