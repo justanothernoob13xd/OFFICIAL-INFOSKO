@@ -49,7 +49,7 @@ $(document).ready(function () {
                         // Set a timer to reset the room to green after 30 seconds
                         roomTimers[room.id] = setTimeout(() => {
                             button.removeClass('btn-danger').addClass('btn-success');
-                            console.log(`Room ${room.id} reset to unoccupied (green) after timeout`);
+                            console.log(`Room ${room.id} reset to unoccupied (green) after no motion for 30 seconds`);
                         }, 30000); // Adjust to 60000 for 1 minute
                     } else {
                         button.removeClass('btn-danger').addClass('btn-success');
@@ -94,7 +94,7 @@ $(document).ready(function () {
             });
         });
     }
-
+    
     async function fetchAndUpdateModal(roomId) {
         try {
             console.log(`Fetching schedule for room ID: ${roomId}`);
