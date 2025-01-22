@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand
 class Room(models.Model):
     number = models.CharField(max_length=100, unique= True)
     occupied = models.BooleanField(default=False)
+    last_motion = models.DateTimeField(null=True, blank=True)
     
     def save(self, *args, **kwargs):
         # Check if "Room" is already part of the number

@@ -55,6 +55,7 @@ def get_rooms(request):
             {
                 'id': room.id,
                 'name': room.number,  # Ensure 'name' is consistent with the frontend
+                "occupied": room.occupied  # Include the occupied field
             }
             for room in rooms
         ]

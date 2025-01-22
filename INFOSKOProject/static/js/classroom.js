@@ -13,25 +13,41 @@ $(document).ready(function () {
             console.log("Fetched rooms data:", data);
 
             const roomsContainer = $("#rooms-container");
+
+            // Clear the container and "NO CLASSROOMS AVAILABLE" message
             roomsContainer.empty();
+            $(".no-classrooms-message").remove();
 
             if (!data.rooms || data.rooms.length === 0) {
-                roomsContainer.append('<p class="text-center text-muted w-100">NO CLASSROOMS AVAILABLE</p>');
+                // If no rooms, display the message
+                roomsContainer.append('<p class="text-center text-muted no-classrooms-message w-100">NO CLASSROOMS AVAILABLE</p>');
             } else {
+                // Create or update buttons for rooms
                 data.rooms.forEach(room => {
-                    const button = $(`
-                        <div class="col">
-                            <button class="btn w-100 room-button btn-primary" 
+                    let button = $(`button[data-room-id='${room.id}']`);
+                    if (button.length === 0) {
+                        // Button doesn't exist, create it
+                        button = $(`
+                            <button class="btn w-100 room-button btn-success" 
                                     data-room-id="${room.id}" 
                                     data-room-name="${room.name}">
                                 ${room.name}
                             </button>
-                        </div>`);
-                    roomsContainer.append(button);
-                });
+                        `);
+                        const col = $(`<div class="col"></div>`).append(button);
+                        roomsContainer.append(col);
+                    }
 
-                bindRoomButtonClick();
+                    // Update button class based on occupied status
+                    if (room.occupied) {
+                        button.removeClass('btn-success').addClass('btn-danger');
+                    } else {
+                        button.removeClass('btn-danger').addClass('btn-success');
+                    }
+                });
             }
+
+            bindRoomButtonClick(); // Rebind click events
         } catch (error) {
             console.error("Error fetching room data:", error);
         }
@@ -261,3 +277,5 @@ function removeExpiredSchedules() {
 setInterval(removeExpiredSchedules, 1 * 60 * 1000); // Check every 1 minute
 
 });
+
+//ROOM OCCUPATION
