@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils.timezone import now
-from main.models import Room 
+from main.models import Room
 
 @api_view(['POST'])
 def motion_detected(request):
@@ -23,8 +23,9 @@ def motion_detected(request):
             print(f"Motion detected for Room {room.number}")
             return Response({"message": f"Motion detected for Room {room.number}"}, status=status.HTTP_200_OK)
         elif status_value == "no_motion":
+            room.occupied = False  # Reset room to unoccupied
+            room.save()
             print(f"No motion signal received for Room {room.number}")
-            # Optionally, handle `no_motion` here if needed
             return Response({"message": f"No motion for Room {room.number}"}, status=status.HTTP_200_OK)
         else:
             return Response({"error": "Invalid status value"}, status=status.HTTP_400_BAD_REQUEST)
