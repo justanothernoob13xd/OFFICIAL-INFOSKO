@@ -50,7 +50,7 @@ $(document).ready(function () {
                         roomTimers[room.id] = setTimeout(() => {
                             button.removeClass('btn-danger').addClass('btn-success');
                             console.log(`Room ${room.id} reset to unoccupied (green) after no motion for 30 seconds`);
-                        }, 50000); // Adjust to 60000 for 1 minute
+                        }, 300000); // Adjust to 60000 for 1 minute
                     } else {
                         button.removeClass('btn-danger').addClass('btn-success');
                         clearTimeout(roomTimers[room.id]); // Clear any timer if room is unoccupied
