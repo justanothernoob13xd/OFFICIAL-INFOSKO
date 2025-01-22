@@ -5,6 +5,7 @@ $(document).ready(function () {
     setInterval(fetchRooms, 5000); // Poll for room updates every 5 seconds
 
     let modalPollingInterval;
+    let roomTimers = {}; // Track timers for each room
 
     async function fetchRooms() {
         try {
@@ -41,8 +42,18 @@ $(document).ready(function () {
                     // Update button class based on occupied status
                     if (room.occupied) {
                         button.removeClass('btn-success').addClass('btn-danger');
+
+                        // Clear any existing timer for the room
+                        clearTimeout(roomTimers[room.id]);
+
+                        // Set a timer to reset the room to green after 30 seconds
+                        roomTimers[room.id] = setTimeout(() => {
+                            button.removeClass('btn-danger').addClass('btn-success');
+                            console.log(`Room ${room.id} reset to unoccupied (green) after timeout`);
+                        }, 30000); // Adjust to 60000 for 1 minute
                     } else {
                         button.removeClass('btn-danger').addClass('btn-success');
+                        clearTimeout(roomTimers[room.id]); // Clear any timer if room is unoccupied
                     }
                 });
             }
