@@ -31,10 +31,9 @@ DEBUG = False
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 ALLOWED_HOSTS = [
     'official-infosko.onrender.com', 
-    'official-infosko.onrender.com/adminforINFOSKOonly/'
     'localhost', 
     '127.0.0.1',
-    '192.168.1.49'
+    '192.168.1.49',
 ]
 
 # Application definition

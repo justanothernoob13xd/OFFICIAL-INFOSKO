@@ -5,4 +5,5 @@ services:
     plan: free
     buildCommand: ""
     startCommand: gunicorn INFOSKOProject.infosko.wsgi:application --bind 0.0.0.0:8000
+    staticPublishPath: media
     dockerfilePath: ./Dockerfile
