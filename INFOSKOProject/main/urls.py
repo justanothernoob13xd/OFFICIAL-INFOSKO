@@ -3,7 +3,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from . import views 
 from rest_framework.routers import DefaultRouter
-from .views import PersonnelViewSet, index, faculties, navigation, secfloor, thrdfloor, fourthfloor, personnel_list, personnel_suggestions, upload_csv_classroom
+from .views import PersonnelViewSet, index, faculties, navigation, secfloor, thrdfloor, fourthfloor, personnel_list, personnel_suggestions, confirm_csv_upload_classroom, upload_csv_classroom
 router = DefaultRouter()
 router.register(r'personnel', PersonnelViewSet,)
 
